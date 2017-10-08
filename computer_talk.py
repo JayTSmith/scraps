@@ -49,7 +49,7 @@ class EventObject(object):
     #                 self._listeners.remove(ref)
 
     def handle_event(self, event):
-        print('{} handled {}.'.format(str(self), event))
+        print('{} handled {} from {}.'.format(str(self), event, event.source))
 
     # def notify_all(self, event=None):
     #     for listener in self._listeners:
@@ -120,14 +120,17 @@ class Room(EventObject):
         self.event_queue = []
 
     def add_people(self, *people):
-        self.avail_people.extend(*people)
+        for person in people:
+            if person.name == 'NONAME-PERSON':
+                person.name = 'Person-{}'.format(len(self.avail_people))
+            self.avail_people.append(person)
 
     def create_new_con(self):
         if len(self.avail_people) >= 2:
             peeps = [Utility.rand_pop(self.avail_people), Utility.rand_pop(self.avail_people)]
             while randint(0, 1) and self.avail_people:
                 peeps.append(Utility.rand_pop(self.avail_people))
-            return Conversation(self, peeps, name=self.new_con_name())
+            return Conversation(self, *peeps, name=self.new_con_name())
         else:
             return None
 
@@ -179,7 +182,7 @@ class Conversation(EventObject):
 
         self.room = room
         # Because of the fact that it is the argument, we must get the list from the arg.
-        self.people = people[0]
+        self.people = list(people)
         self.last_talker = None
         # If it is already marked for CON_END.
         self.marked = False
@@ -196,15 +199,18 @@ class Conversation(EventObject):
                     for peep in self.people:
                         self.room.event_queue.append(Event(self, peep, _type=Converse.START))
                 elif event.type == Converse.GENERIC:
-                    target = self.last_talker if self.last_talker else choice(self.people)
+                    if self.last_talker is not None:
+                        target = self.last_talker
+                    else:
+                        target = choice([person for person in self.people if person != event.source])
                     self.last_talker = event.source
                     self.room.event_queue.append(Event(event.source, target, _type=event.type))
                 elif event.type == Converse.DEPARTURE:
-                    if event.source in self.people:
+                    if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
                         event.source.conversation = None
                         self.room.avail_people.append(event.source)
-                    if len(self.people) < 2:
+                    if len(self.people) < 2 and not self.marked:
                         self.room.event_queue.append(Event(self, self.room, _type=Signal.CON_END))
                         self.marked = True
 
@@ -248,13 +254,13 @@ class Person(EventObject):
 
 
 def main():
-    room = Room()
-    idle = Event(None, room, _type=Signal.IDLE)
+    test_room = Room()
+    idle = Event(None, test_room, _type=Signal.IDLE)
     peeps = [Person() for x in range(6)]
-    room.add_people(peeps)
-    
+    test_room.add_people(*peeps)
+
     idle.fire()
-    return room
+    return test_room
 
 
 if __name__ == '__main__':
