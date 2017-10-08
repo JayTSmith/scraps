@@ -248,25 +248,4 @@ class Person(EventObject):
         
 ###########################
 # Program Section End
-#
-# Testing Section Beginning
-###########################
-
-
-def main():
-    test_room = Room()
-    idle = Event(None, test_room, _type=Signal.IDLE)
-    peeps = [Person() for x in range(6)]
-    test_room.add_people(*peeps)
-
-    idle.fire()
-    return test_room
-
-
-if __name__ == '__main__':
-    room = main()
-    room.handle_queue()
-    print(list(map(str, room.avail_people)))
-###########################
-# Testing Section End
 ###########################
