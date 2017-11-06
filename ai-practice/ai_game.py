@@ -81,7 +81,7 @@ class AI(object):
 
     def get_choice(self):
         choice = self.consider_options()
-        print(choice, file=self.org_out)
+        print('Choice:', choice, file=self.org_out)
         self._reset_weights()
         return choice
 
