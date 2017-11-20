@@ -49,6 +49,22 @@ class Converse(Enum):
     DEPARTURE = 'DEPARTURE'
 
 
+class PersonalityTraits(Enum):
+    NO_FILTER = 'NO_FILTER'
+    INTROVERT = 'INTROVERT'
+    EXTROVERT = 'EXTROVERT'
+    TALKATIVE = 'TALKATIVE'
+    LISTENS = 'GOOD_LISTENER'
+    NOSY = 'NOSY'
+    CARING = 'CARING'
+    IMMATURE = 'IMMATURE'
+    DEPRESSED = 'DEPRESSED'
+    BASIC = 'BASIC'
+    HIPSTER = 'HIPSTER'
+
+
+
+
 class Event(object):
     def __init__(self, source, target, _type=None, value=None):
         self.source = source
