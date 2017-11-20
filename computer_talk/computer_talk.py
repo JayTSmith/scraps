@@ -10,9 +10,7 @@
 ###########################
 
 from enum import Enum
-
 from random import randint, choice
-from threading import Thread
 
 
 class Utility(object):
@@ -112,15 +110,8 @@ class Building(EventObject):
                     idle.fire()
 
     def resolve_queues(self):
-        threads = []
         for room in self.rooms:
-            t = Thread(target=room.handle_queue)
-            t.start()
-
-        alive_threads = list(filter(lambda t: t.isAlive(), threads))
-        while alive_threads:
-            alive_threads[0].join()
-            alive_threads = list(filter(lambda t: t.isAlive(), threads))
+            room.handle_queue()
 
 
 class Room(EventObject):
@@ -217,12 +208,17 @@ class Conversation(EventObject):
                     for peep in self.people:
                         self.room.event_queue.append(Event(self, peep, _type=Converse.START))
                 elif event.type == Converse.GENERIC:
+                    # Gets whoever talked last, they will get hit with the next event.
                     if self.last_talker is not None:
                         target = self.last_talker
                     else:
                         target = choice([person for person in self.people if person != event.source])
                     self.last_talker = event.source
-                    self.room.event_queue.append(Event(event.source, target, _type=event.type))
+
+                    # The Conversation acts a hub for the people within. It's up to the people to play it safe.
+                    for peep in self.people:
+                        if peep != self.last_talker:
+                            self.room.event_queue.append(Event(event.source, peep, _type=event.type, value=target))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
@@ -249,7 +245,7 @@ class Person(EventObject):
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
 
-        if isinstance(event, Event) and event.available:
+        if isinstance(event, Event) and event.available and event.value == self:
             try:
                 if event.type == Converse.START:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
