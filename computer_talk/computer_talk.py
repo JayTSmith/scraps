@@ -22,38 +22,10 @@ class Utility(object):
 
 
 class EventObject(object):
-    def __init__(self):
-        self._listeners = set()
-
-    """Code is commented in this class because it is of a different paradigm - 
-    EventListeners rather than a centralized listener."""
-
-    # @property
-    # def listeners(self):
-    #     return self._listeners
-    #
-    # def attach_listeners(self, *listeners):
-    #     for listener in listeners[0]:
-    #         if isinstance(listener, EventObject):
-    #             self._listeners.add(weakref.ref(listener))
-    #
-    # def clean_listeners(self):
-    #     for listener in self._listeners:
-    #         if not listener():
-    #             self._listeners.remove(listener)
-    #
-    # def remove_listeners(self, *listeners):
-    #     for listener in listeners:
-    #         for ref in weakref.getweakrefs(listener):
-    #             if ref in self._listeners:
-    #                 self._listeners.remove(ref)
+    """This class signifies that it is made to respond to Event objects. It has a generic print statement by default."""
 
     def handle_event(self, event):
         print('{} handled {} from {}.'.format(str(self), event, event.source))
-
-    # def notify_all(self, event=None):
-    #     for listener in self._listeners:
-    #         listener().handle_event(event)
 
 ###########################
 # Core Section End
@@ -108,6 +80,37 @@ class Event(object):
 #
 # Program Section Begin
 ###########################
+
+class Building(EventObject):
+    def __init__(self):
+        super(Building, self).__init__()
+        self.rooms = []
+        self.people = []
+
+    def move_to_room(self, person=None):
+        """Moves a person to another room."""
+        chosen = person
+        if person is None:
+            chosen = choice(self.people)
+
+        new_room = choice(self.rooms)
+        while chosen in new_room.avail_people:
+            new_room = choice(self.rooms)
+
+        return
+
+    def handle_event(self, event):
+        super(Building, self).handle_event(event=event)
+
+        if isinstance(event, Event) and event.available:
+            if event.type == Signal.IDLE:
+                for r in self.rooms:
+                    idle = Event(self, r, _type=Signal.IDLE, value=None)
+                    idle.fire()
+
+    def resolve_queues(self):
+        for room in self.rooms:
+            room.handle_queue()
 
 
 class Room(EventObject):
@@ -181,7 +184,6 @@ class Conversation(EventObject):
         self.name = kwargs.get('name', 'NONAME-CON')
 
         self.room = room
-        # Because of the fact that it is the argument, we must get the list from the arg.
         self.people = list(people)
         self.last_talker = None
         # If it is already marked for CON_END.
@@ -249,3 +251,21 @@ class Person(EventObject):
 ###########################
 # Program Section End
 ###########################
+
+
+def main():
+    b = Building()
+
+    for i in range(20):
+        if i % 5 == 0:
+            b.rooms.append(Room())
+        b.rooms[i//5].add_people(Person())
+
+    b_idle = Event(None, b, _type=Signal.IDLE, value=None)
+    b_idle.fire()
+    b.resolve_queues()
+    return b
+
+
+if __name__ == '__main__':
+    x = main()
