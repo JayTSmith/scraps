@@ -211,7 +211,7 @@ class Conversation(EventObject):
     def handle_event(self, event):
         super(Conversation, self).handle_event(event=event)
 
-        if isinstance(event, Event):
+        if isinstance(event, Event) and event.available:
             try:
                 if event.type == Converse.START:
                     for peep in self.people:
@@ -249,7 +249,7 @@ class Person(EventObject):
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
 
-        if isinstance(event, Event):
+        if isinstance(event, Event) and event.available:
             try:
                 if event.type == Converse.START:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
