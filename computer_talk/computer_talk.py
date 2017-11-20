@@ -9,10 +9,10 @@
 # Core Section Begin
 ###########################
 
-import weakref
-
 from enum import Enum
+
 from random import randint, choice
+from threading import Thread
 
 
 class Utility(object):
@@ -112,8 +112,15 @@ class Building(EventObject):
                     idle.fire()
 
     def resolve_queues(self):
+        threads = []
         for room in self.rooms:
-            room.handle_queue()
+            t = Thread(target=room.handle_queue)
+            t.start()
+
+        alive_threads = list(filter(lambda t: t.isAlive(), threads))
+        while alive_threads:
+            alive_threads[0].join()
+            alive_threads = list(filter(lambda t: t.isAlive(), threads))
 
 
 class Room(EventObject):
