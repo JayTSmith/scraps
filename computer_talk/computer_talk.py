@@ -37,6 +37,7 @@ class EventObject(object):
 class Signal(Enum):
     START = 'START'
     IDLE = 'IDLE'
+    DEPARTURE = 'DEPARTURE'
     CON_END = 'CON_END'
     END = 'END'
 
@@ -97,6 +98,8 @@ class Building(EventObject):
         while chosen in new_room.avail_people:
             new_room = choice(self.rooms)
 
+        new_room.avail_people.append(chosen)
+
         return
 
     def handle_event(self, event):
@@ -116,9 +119,10 @@ class Building(EventObject):
 class Room(EventObject):
     base_converse_chance = 85
     
-    def __init__(self):
+    def __init__(self, building=None):
         super(EventObject, self).__init__()
         self.avail_people = []
+        self.building = building if isinstance(building, Building) else None
         self.conversations = set()
         self.event_queue = []
 
@@ -167,6 +171,11 @@ class Room(EventObject):
                     for person in event.source.people:
                         person.conversation = None
                         self.avail_people.append(person)
+            elif event.type == Signal.DEPARTURE:
+                if event.source in self.avail_people and self.building is not None:
+                    print('Moving {} to another room!'.format(event.source))
+                    self.avail_people.remove(event.source)
+                    self.building.move_to_room(person=event.source)
 
     def handle_queue(self):
         while self.event_queue:
@@ -241,6 +250,9 @@ class Person(EventObject):
                 elif event.type == Converse.GENERIC:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.DEPARTURE, value=self))
+                    if randint(0, 1):
+                        self.conversation.room.event_queue.append(Event(self, self.conversation.room,
+                                                                  _type=Signal.DEPARTURE, value=self))
             except AttributeError:
                 # Look at Conversation
                 pass
@@ -258,7 +270,7 @@ def main():
 
     for i in range(20):
         if i % 5 == 0:
-            b.rooms.append(Room())
+            b.rooms.append(Room(building=b))
         b.rooms[i//5].add_people(Person())
 
     b_idle = Event(None, b, _type=Signal.IDLE, value=None)
