@@ -217,6 +217,7 @@ class Conversation(EventObject):
 
                     # The Conversation acts a hub for the people within. It's up to the people to play it safe.
                     for peep in self.people:
+                        print(peep, 'vs', self.last_talker)
                         if peep != self.last_talker:
                             self.room.event_queue.append(Event(event.source, peep, _type=event.type, value=target))
                 elif event.type == Converse.DEPARTURE:
@@ -245,12 +246,12 @@ class Person(EventObject):
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
 
-        if isinstance(event, Event) and event.available and event.value == self:
+        if isinstance(event, Event) and event.available:
             try:
                 if event.type == Converse.START:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.GENERIC, value=self))
-                elif event.type == Converse.GENERIC:
+                elif event.type == Converse.GENERIC and event.value == self:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.DEPARTURE, value=self))
                     if randint(0, 1):
@@ -280,6 +281,17 @@ def main():
     b_idle.fire()
     b.resolve_queues()
     return b
+
+
+def small_test():
+    r = Room()
+    r.add_people(Person(), Person(), Person())
+
+    idle = Event(None, r, _type=Signal.IDLE, value=None)
+    idle.fire()
+
+    r.handle_queue()
+    return r
 
 
 if __name__ == '__main__':
