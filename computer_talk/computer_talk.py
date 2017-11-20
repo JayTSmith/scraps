@@ -63,6 +63,17 @@ class PersonalityTraits(Enum):
     HIPSTER = 'HIPSTER'
 
 
+class MessageTraits(Enum):
+    SERIOUS = 'SERIOUS'
+    SAD = 'SAD'
+    JOKE = 'JOKE'
+    # Dark as in dark humor
+    DARK = 'DARK'
+    # Jab is like a roast
+    JAB = 'JAB'
+    # Culture = Reference
+    CULTURE = 'CULTURE'
+    SILENCE = 'SILENCE'
 
 
 class Event(object):
