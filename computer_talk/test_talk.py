@@ -1,5 +1,6 @@
-from .computer_talk import *
 import unittest
+
+from .computer_talk import *
 
 
 class TestComputerTalk(unittest.TestCase):
@@ -26,3 +27,15 @@ class TestComputerTalk(unittest.TestCase):
         room.handle_queue()
 
         self.assertCountEqual(peeps, room.avail_people)
+
+    def test_building_cycle(self):
+        b = Building()
+        for i in range(4):
+            b.rooms.append(Room())
+            b.rooms[i].add_people(Person(), Person(), Person(), Person(), Person())
+
+        b_idle = Event(None, b, _type=Signal.IDLE, value=None)
+        b_idle.fire()
+
+        b.resolve_queues()
+        self.assertEqual(20, sum([len(room.avail_people) for room in b.rooms]), "UH-OH WE MESSED IT!")
