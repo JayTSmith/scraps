@@ -16,17 +16,15 @@ class TestComputerTalk(unittest.TestCase):
         self.assertSequenceEqual(peeps, room.avail_people)
 
     def test_room_cycle(self):
-        peeps = [Person() for x in range(6)]
-
         room = Room()
-        room.add_people(*peeps)
+        room.add_people(Person(), Person(), Person(), Person(), Person(), Person())
 
         idle = Event(None, room, _type=Signal.IDLE, value=None)
         idle.fire()
 
         room.handle_queue()
 
-        self.assertCountEqual(peeps, room.avail_people)
+        self.assertEqual(6, len(room.avail_people))
 
     def test_building_cycle(self):
         b = Building()

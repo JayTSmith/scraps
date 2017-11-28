@@ -278,9 +278,12 @@ class Person(EventObject):
                 if event.type == Converse.START:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.GENERIC, value=self))
+                # May need to be put into a separate method.
                 elif event.type == Converse.GENERIC and event.value == self:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.DEPARTURE, value=self))
+
+                    # Rolls to see if they are going to leave the room.
                     if randint(0, 1):
                         self.conversation.room.event_queue.append(Event(self, self.conversation.room,
                                                                   _type=Signal.DEPARTURE, value=self))
