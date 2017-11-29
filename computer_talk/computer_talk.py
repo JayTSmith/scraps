@@ -130,7 +130,9 @@ class Event(object):
         return self.available
 
     def __str__(self):
-        return str(self.type)
+        t = '' if not self.type else 'Type: ' + str(self.type)
+        v = '' if not self.value else 'Value: ' + str(self.value)
+        return '({},{})'.format(t, v)
 
 
 ###########################
@@ -301,6 +303,7 @@ class Person(EventObject):
         super(EventObject, self).__init__()
         self.name = kwargs.get('name', 'NONAME-PERSON')
         self.conversation = None
+        self.tired = False
 
         self.traits = None
         self.weight_map = dict()
@@ -358,19 +361,30 @@ class Person(EventObject):
                                                                     value=(self, self.generate_message_trait())))
                 # May need to be put into a separate method.
                 elif event.type == Converse.GENERIC and event.value[0] == self:
-                    self.conversation.room.event_queue.append(Event(self, self.conversation,
-                                                                    _type=Converse.DEPARTURE, value=self))
+                    if self.tired:
+                        self.conversation.room.event_queue.append(Event(self, self.conversation,
+                                                                        _type=Converse.DEPARTURE, value=self))
 
-                    # Rolls to see if they are going to leave the room.
-                    if randint(0, 1):
-                        self.conversation.room.event_queue.append(Event(self, self.conversation.room,
-                                                                        _type=Signal.DEPARTURE, value=self))
+                        # Rolls to see if they are going to leave the room.
+                        if randint(0, 1):
+                            self.conversation.room.event_queue.append(Event(self, self.conversation.room,
+                                                                            _type=Signal.DEPARTURE, value=self))
+                    else:
+                        self.weight_map[event.value[1]] += 1
+                        self.conversation.room.event_queue.append(Event(self, self.conversation,
+                                                                        _type=Converse.GENERIC,
+                                                                        value=(self, self.generate_message_trait())))
+                        self.weight_map[event.value[1]] -= 1
+                        self.tired = True
             except AttributeError:
                 # Look at Conversation
                 pass
 
     def __str__(self):
         return '{}({})'.format(self.name, str(self.conversation))
+
+    def __repr__(self):
+        return str(self)
 
 ###########################
 # Program Section End
