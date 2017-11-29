@@ -8,7 +8,6 @@
 ###########################
 # Core Section Begin
 ###########################
-
 from enum import Enum
 from random import randint, choice
 
@@ -16,7 +15,39 @@ from random import randint, choice
 class Utility(object):
     @staticmethod
     def rand_pop(l):
-        return l.pop(randint(0, len(l)-1))
+        return l.pop(randint(0, len(l) - 1))
+
+    @staticmethod
+    def get_values(enum):
+        return [x for x in enum]
+
+    @staticmethod
+    def match_length(l, le, replace=None):
+        """Extends or shrinks the list in order to make it a specified length
+        l: list to modify
+        le: length to match
+        replace: element to use for extension"""
+        if len(l) > le:
+            return l[:le]
+        if len(l) < le:
+            return l + [None] * (le - len(l))
+        return l
+
+    @staticmethod
+    def random_weighted(elements, weights):
+        l_weights = Utility.match_length(weights, len(elements), 0)
+
+        endpoint = sum(l_weights)
+        index = randint(0, endpoint - 1)
+
+        # Sum of the weights for the stepper
+        running_total = 0
+
+        for i in range(len(elements)):
+            running_total += l_weights[i]
+            if index < running_total:
+                return elements[i]
+        return None
 
 
 class EventObject(object):
@@ -24,6 +55,7 @@ class EventObject(object):
 
     def handle_event(self, event):
         print('{} handled {} from {}.'.format(str(self), event, event.source))
+
 
 ###########################
 # Core Section End
@@ -143,7 +175,7 @@ class Building(EventObject):
 
 class Room(EventObject):
     base_converse_chance = 85
-    
+
     def __init__(self, building=None):
         super(EventObject, self).__init__()
         self.avail_people = []
@@ -270,6 +302,45 @@ class Person(EventObject):
         self.name = kwargs.get('name', 'NONAME-PERSON')
         self.conversation = None
 
+        self.traits = None
+        self.weight_map = dict()
+
+        self.build_traits()
+        self.generate_weight_map()
+
+    def build_traits(self):
+        assigned_traits = set()
+        possible_traits = Utility.get_values(PersonalityTraits)
+        num_of_traits = randint(0, len(possible_traits) - 1)
+
+        for i in range(num_of_traits):
+            assigned_traits.add(choice(possible_traits))
+        self.traits = tuple(assigned_traits)
+
+    def generate_weight_map(self):
+        for t in MessageTraits:
+            self.weight_map[t] = 1
+
+        if PersonalityTraits.BASIC in self.traits:
+            self.weight_map[MessageTraits.CULTURE] += 3
+        if PersonalityTraits.NO_FILTER in self.traits:
+            self.weight_map[MessageTraits.SERIOUS] += 1
+            self.weight_map[MessageTraits.SAD] += 1
+            self.weight_map[MessageTraits.JOKE] += 2
+            self.weight_map[MessageTraits.DARK] += 2
+        if PersonalityTraits.CARING in self.traits:
+            self.weight_map[MessageTraits.SERIOUS] += 3
+        if PersonalityTraits.EXTROVERT in self.traits:
+            self.weight_map[MessageTraits.SILENCE] -= 4
+        if PersonalityTraits.INTROVERT in self.traits:
+            self.weight_map[MessageTraits.SILENCE] += 4
+        if PersonalityTraits.HIPSTER in self.traits:
+            self.weight_map[MessageTraits.CULTURE] -= 3
+        if PersonalityTraits.TALKATIVE in self.traits:
+            self.weight_map[MessageTraits.SILENCE] += 1
+        if PersonalityTraits.DEPRESSED in self.traits:
+            self.weight_map[MessageTraits.SAD] += 2
+
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
 
@@ -277,52 +348,24 @@ class Person(EventObject):
             try:
                 if event.type == Converse.START:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
-                                                                    _type=Converse.GENERIC, value=self))
+                                                                    _type=Converse.GENERIC,
+                                                                    value=(self, self.generate_message_trait())))
                 # May need to be put into a separate method.
-                elif event.type == Converse.GENERIC and event.value == self:
+                elif event.type == Converse.GENERIC and event.value[0] == self:
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.DEPARTURE, value=self))
 
                     # Rolls to see if they are going to leave the room.
                     if randint(0, 1):
                         self.conversation.room.event_queue.append(Event(self, self.conversation.room,
-                                                                  _type=Signal.DEPARTURE, value=self))
+                                                                        _type=Signal.DEPARTURE, value=self))
             except AttributeError:
                 # Look at Conversation
                 pass
 
     def __str__(self):
         return '{}({})'.format(self.name, str(self.conversation))
-        
+
 ###########################
 # Program Section End
 ###########################
-
-
-def main():
-    b = Building()
-
-    for i in range(20):
-        if i % 5 == 0:
-            b.rooms.append(Room(building=b))
-        b.rooms[i//5].add_people(Person())
-
-    b_idle = Event(None, b, _type=Signal.IDLE, value=None)
-    b_idle.fire()
-    b.resolve_queues()
-    return b
-
-
-def small_test():
-    r = Room()
-    r.add_people(Person(), Person(), Person())
-
-    idle = Event(None, r, _type=Signal.IDLE, value=None)
-    idle.fire()
-
-    r.handle_queue()
-    return r
-
-
-if __name__ == '__main__':
-    x = main()
