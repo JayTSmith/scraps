@@ -276,9 +276,9 @@ class Conversation(EventObject):
 
                     # The Conversation acts a hub for the people within. It's up to the people to play it safe.
                     for peep in self.people:
-                        print(peep, 'vs', self.last_talker)
                         if peep != self.last_talker:
-                            self.room.event_queue.append(Event(event.source, peep, _type=event.type, value=target))
+                            self.room.event_queue.append(Event(event.source, peep, _type=event.type,
+                                                               value=(target, event.value[1])))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
@@ -340,6 +340,12 @@ class Person(EventObject):
             self.weight_map[MessageTraits.SILENCE] += 1
         if PersonalityTraits.DEPRESSED in self.traits:
             self.weight_map[MessageTraits.SAD] += 2
+
+    def generate_message_trait(self):
+        traits = list(self.weight_map.keys())
+        weights = list(self.weight_map.values())
+
+        return Utility.random_weighted(traits, weights)
 
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
