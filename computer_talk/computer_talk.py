@@ -38,7 +38,7 @@ class Utility(object):
         l_weights = Utility.match_length(weights, len(elements), 0)
 
         endpoint = sum(l_weights)
-        index = randint(0, endpoint - 1)
+        index = randint(1, endpoint) - 1
 
         # Sum of the weights for the stepper
         running_total = 0
