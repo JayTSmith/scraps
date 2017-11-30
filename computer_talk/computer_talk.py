@@ -352,13 +352,18 @@ class Person(EventObject):
         super(EventObject, self).__init__()
         self.name = kwargs.get('name', 'NONAME-PERSON')
         self.conversation = None
-        self.tired = False
+        self.social_tolerance = 5
+        self.cur_tolerance = self.social_tolerance
 
         self.traits = None
         self.weight_map = dict()
 
         self.build_traits()
         self.generate_weight_map()
+
+    @property
+    def tired(self):
+        return self.cur_tolerance <= 0
 
     def build_traits(self):
         assigned_traits = set()
@@ -425,6 +430,7 @@ class Person(EventObject):
         if isinstance(event, Event) and event.available:
             try:
                 if event.type == Converse.START:
+                    self.cur_tolerance = self.social_tolerance
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.GENERIC,
                                                                     value=(self, self.generate_message_trait())))
@@ -443,7 +449,7 @@ class Person(EventObject):
                         self.conversation.room.event_queue.append(self.generate_message_conv(self.conversation,
                                                                                              event.value[1],
                                                                                              _type=Converse.GENERIC))
-                        self.tired = True
+                        self.cur_tolerance -= 1
             except AttributeError:
                 # Look at Conversation
                 pass
