@@ -35,7 +35,7 @@ class Utility(object):
 
     @staticmethod
     def random_weighted(elements, weights):
-        l_weights = Utility.match_length(weights, len(elements), replace=0)
+        l_weights = sorted(Utility.match_length(weights, len(elements), replace=0))
 
         # If there is only one element, try to return if there are none, return None.
         if len(elements) <= 1:
