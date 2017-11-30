@@ -158,10 +158,18 @@ class Event(object):
             self.available = False
 
     def fire(self):
-        if isinstance(self.target, EventObject):
-            self.target.handle_event(self)
-        else:
-            print('I have no target! {}'.format(str(self)))
+        try:
+            # In case, self.target is iterable
+            for target in self.target:
+                if isinstance(target, EventObject):
+                    target.handle_event(self)
+                else:
+                    print('This target can\'t handle {}!'.format(str(self)))
+        except TypeError:
+            if isinstance(self.target, EventObject):
+                self.target.handle_event(self)
+            else:
+                print('I have no target! {}'.format(str(self)))
 
     def __bool__(self):
         return self.available
@@ -307,17 +315,21 @@ class Conversation(EventObject):
                         self.room.event_queue.append(Event(self, peep, _type=Converse.START))
                 elif event.type == Converse.GENERIC:
                     # Gets whoever talked last, they will get hit with the next event.
-                    if self.last_talker is not None:
+                    if self.last_talker is not None and self.last_talker.conversation == self and \
+                                    self.last_talker != event.source:
                         target = self.last_talker
                     else:
                         target = choice([person for person in self.people if person != event.source])
                     self.last_talker = event.source
 
                     # The Conversation acts a hub for the people within. It's up to the people to play it safe.
-                    for peep in self.people:
-                        if peep != self.last_talker:
-                            self.room.event_queue.append(Event(event.source, peep, _type=event.type,
-                                                               value=(target, event.value[1])))
+                    other_peeps = [peep for peep in self.people if peep != self.last_talker]
+                    self.room.event_queue.append(Event(event.source, other_peeps,
+                                                       _type=event.type, value=(target, event.value[1])))
+                    # for peep in self.people:
+                    #     if peep != self.last_talker:
+                    #         self.room.event_queue.append(Event(event.source, peep, _type=event.type,
+                    #                                            value=(target, event.value[1])))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
@@ -418,6 +430,7 @@ class Person(EventObject):
                                                                     value=(self, self.generate_message_trait())))
                 # May need to be put into a separate method.
                 elif event.type == Converse.GENERIC and event.value[0] == self:
+                    event.consume()
                     if self.tired:
                         self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                         _type=Converse.DEPARTURE, value=self))
