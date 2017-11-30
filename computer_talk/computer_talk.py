@@ -9,7 +9,7 @@
 # Core Section Begin
 ###########################
 from enum import Enum
-from random import randint, choice
+from random import random, randint, choice
 
 
 class Utility(object):
@@ -30,12 +30,12 @@ class Utility(object):
         if len(l) > le:
             return l[:le]
         if len(l) < le:
-            return l + [None] * (le - len(l))
+            return l + [replace] * (le - len(l))
         return l
 
     @staticmethod
     def random_weighted(elements, weights):
-        l_weights = Utility.match_length(weights, len(elements), 0)
+        l_weights = Utility.match_length(weights, len(elements), replace=0)
 
         # If there is only one element, try to return if there are none, return None.
         if len(elements) <= 1:
@@ -46,13 +46,13 @@ class Utility(object):
 
         # Correct weights if need be.
         min_weight = min(l_weights)
-        if min_weight < 0:
+        if min_weight <= 0:
             diff = abs(min_weight - 1)
             for i in range(len(l_weights)):
                 l_weights[i] += diff
 
         endpoint = sum(l_weights)
-        index = randint(1, endpoint) - 1
+        index = ((endpoint - 1) * random())
 
         # Sum of the weights for the stepper
         running_total = 0
@@ -382,7 +382,7 @@ class Person(EventObject):
             self.weight_map[MessageTraits.SAD] += 2
 
     def generate_message_trait(self):
-        valid_weights = filter(lambda i: self.weight_map[i[0]] > 0, self.weight_map.items())
+        valid_weights = filter(lambda item: self.weight_map[item[0]] > 0, self.weight_map.items())
 
         traits = []
         weights = []
