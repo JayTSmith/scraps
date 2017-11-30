@@ -37,13 +37,20 @@ class Utility(object):
     def random_weighted(elements, weights):
         l_weights = Utility.match_length(weights, len(elements), 0)
 
-        # Verfiy that the elements are usable
+        # Verify that the elements are usable
         if len(elements) <= 1:
             try:
                 return elements[0]
             except IndexError:
                 return None
-        print(l_weights)
+
+        # Correct weights if need be.
+        min_weight = min(l_weights)
+        if min_weight < 0:
+            diff = abs(min_weight - 1)
+            for i in range(len(l_weights)):
+                l_weights[i] += diff
+
         endpoint = sum(l_weights)
         index = randint(1, endpoint) - 1
 
