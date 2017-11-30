@@ -108,6 +108,29 @@ class MessageTraits(Enum):
     SILENCE = 'SILENCE'
 
 
+class MessageReactions(Enum):
+    """This contains the traits that are more likely trigger when received."""
+    CULTURE = (MessageTraits.JOKE,
+               MessageTraits.SERIOUS)
+    DARK = (MessageTraits.DARK,)
+    JAB = (MessageTraits.SERIOUS,
+           MessageTraits.JOKE,
+           MessageTraits.SAD)
+    JOKE = (MessageTraits.JOKE,
+            MessageTraits.CULTURE,
+            MessageTraits.JAB)
+    SAD = (MessageTraits.DARK,
+           MessageTraits.SILENCE,
+           MessageTraits.SERIOUS,
+           MessageTraits.SAD)
+    SERIOUS = (MessageTraits.SERIOUS,
+               MessageTraits.JOKE,
+               MessageTraits.SILENCE,
+               MessageTraits.JAB)
+    SILENCE = (MessageTraits.SILENCE,
+               MessageTraits.SERIOUS)
+
+
 class Event(object):
     def __init__(self, source, target, _type=None, value=None):
         self.source = source
