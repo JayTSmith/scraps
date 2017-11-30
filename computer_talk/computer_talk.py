@@ -37,6 +37,13 @@ class Utility(object):
     def random_weighted(elements, weights):
         l_weights = Utility.match_length(weights, len(elements), 0)
 
+        # Verfiy that the elements are usable
+        if len(elements) <= 1:
+            try:
+                return elements[0]
+            except IndexError:
+                return None
+        print(l_weights)
         endpoint = sum(l_weights)
         index = randint(1, endpoint) - 1
 
@@ -368,20 +375,28 @@ class Person(EventObject):
             self.weight_map[MessageTraits.SAD] += 2
 
     def generate_message_trait(self):
-        traits = list(self.weight_map.keys())
-        weights = list(self.weight_map.values())
+        valid_weights = filter(lambda i: self.weight_map[i[0]] > 0, self.weight_map.items())
+
+        traits = []
+        weights = []
+
+        for i in valid_weights:
+            t, w = i
+            traits.append(t)
+            weights.append(w)
 
         return Utility.random_weighted(traits, weights)
 
     def generate_message_conv(self, target, *buffed_traits, _type=None):
         e_type = _type if _type is not None else Converse.DEPARTURE
+        valid_traits = filter(bool, buffed_traits)
 
-        for trait in buffed_traits:
+        for trait in valid_traits:
             self.weight_map[trait] += 1
 
         result = Event(self, target, _type=e_type, value=(self, self.generate_message_trait()))
 
-        for trait in buffed_traits:
+        for trait in valid_traits:
             self.weight_map[trait] -= 1
         return result
 
