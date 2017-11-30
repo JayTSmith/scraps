@@ -9,7 +9,7 @@
 # Core Section Begin
 ###########################
 from enum import Enum
-from random import randint, choice
+from random import random, randint, choice
 
 
 class Utility(object):
@@ -30,15 +30,29 @@ class Utility(object):
         if len(l) > le:
             return l[:le]
         if len(l) < le:
-            return l + [None] * (le - len(l))
+            return l + [replace] * (le - len(l))
         return l
 
     @staticmethod
     def random_weighted(elements, weights):
-        l_weights = Utility.match_length(weights, len(elements), 0)
+        l_weights = sorted(Utility.match_length(weights, len(elements), replace=0))
+
+        # If there is only one element, try to return if there are none, return None.
+        if len(elements) <= 1:
+            try:
+                return elements[0]
+            except IndexError:
+                return None
+
+        # Correct weights if need be.
+        min_weight = min(l_weights)
+        if min_weight <= 0:
+            diff = abs(min_weight - 1)
+            for i in range(len(l_weights)):
+                l_weights[i] += diff
 
         endpoint = sum(l_weights)
-        index = randint(0, endpoint - 1)
+        index = ((endpoint - 1) * random())
 
         # Sum of the weights for the stepper
         running_total = 0
@@ -108,6 +122,29 @@ class MessageTraits(Enum):
     SILENCE = 'SILENCE'
 
 
+class MessageReactions(Enum):
+    """This contains the traits that are more likely trigger when received."""
+    CULTURE = (MessageTraits.JOKE,
+               MessageTraits.SERIOUS)
+    DARK = (MessageTraits.DARK,)
+    JAB = (MessageTraits.SERIOUS,
+           MessageTraits.JOKE,
+           MessageTraits.SAD)
+    JOKE = (MessageTraits.JOKE,
+            MessageTraits.CULTURE,
+            MessageTraits.JAB)
+    SAD = (MessageTraits.DARK,
+           MessageTraits.SILENCE,
+           MessageTraits.SERIOUS,
+           MessageTraits.SAD)
+    SERIOUS = (MessageTraits.SERIOUS,
+               MessageTraits.JOKE,
+               MessageTraits.SILENCE,
+               MessageTraits.JAB)
+    SILENCE = (MessageTraits.SILENCE,
+               MessageTraits.SERIOUS)
+
+
 class Event(object):
     def __init__(self, source, target, _type=None, value=None):
         self.source = source
@@ -121,10 +158,18 @@ class Event(object):
             self.available = False
 
     def fire(self):
-        if isinstance(self.target, EventObject):
-            self.target.handle_event(self)
-        else:
-            print('I have no target! {}'.format(str(self)))
+        try:
+            # In case, self.target is iterable
+            for target in self.target:
+                if isinstance(target, EventObject):
+                    target.handle_event(self)
+                else:
+                    print('This target can\'t handle {}!'.format(str(self)))
+        except TypeError:
+            if isinstance(self.target, EventObject):
+                self.target.handle_event(self)
+            else:
+                print('I have no target! {}'.format(str(self)))
 
     def __bool__(self):
         return self.available
@@ -270,17 +315,21 @@ class Conversation(EventObject):
                         self.room.event_queue.append(Event(self, peep, _type=Converse.START))
                 elif event.type == Converse.GENERIC:
                     # Gets whoever talked last, they will get hit with the next event.
-                    if self.last_talker is not None:
+                    if self.last_talker is not None and self.last_talker.conversation == self and \
+                                    self.last_talker != event.source:
                         target = self.last_talker
                     else:
                         target = choice([person for person in self.people if person != event.source])
                     self.last_talker = event.source
 
                     # The Conversation acts a hub for the people within. It's up to the people to play it safe.
-                    for peep in self.people:
-                        if peep != self.last_talker:
-                            self.room.event_queue.append(Event(event.source, peep, _type=event.type,
-                                                               value=(target, event.value[1])))
+                    other_peeps = [peep for peep in self.people if peep != self.last_talker]
+                    self.room.event_queue.append(Event(event.source, other_peeps,
+                                                       _type=event.type, value=(target, event.value[1])))
+                    # for peep in self.people:
+                    #     if peep != self.last_talker:
+                    #         self.room.event_queue.append(Event(event.source, peep, _type=event.type,
+                    #                                            value=(target, event.value[1])))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
@@ -303,13 +352,18 @@ class Person(EventObject):
         super(EventObject, self).__init__()
         self.name = kwargs.get('name', 'NONAME-PERSON')
         self.conversation = None
-        self.tired = False
+        self.social_tolerance = 5
+        self.cur_tolerance = self.social_tolerance
 
         self.traits = None
         self.weight_map = dict()
 
         self.build_traits()
         self.generate_weight_map()
+
+    @property
+    def tired(self):
+        return self.cur_tolerance <= 0
 
     def build_traits(self):
         assigned_traits = set()
@@ -345,10 +399,30 @@ class Person(EventObject):
             self.weight_map[MessageTraits.SAD] += 2
 
     def generate_message_trait(self):
-        traits = list(self.weight_map.keys())
-        weights = list(self.weight_map.values())
+        valid_weights = filter(lambda item: self.weight_map[item[0]] > 0, self.weight_map.items())
+
+        traits = []
+        weights = []
+
+        for i in valid_weights:
+            t, w = i
+            traits.append(t)
+            weights.append(w)
 
         return Utility.random_weighted(traits, weights)
+
+    def generate_message_conv(self, target, *buffed_traits, _type=None):
+        e_type = _type if _type is not None else Converse.DEPARTURE
+        valid_traits = filter(bool, buffed_traits)
+
+        for trait in valid_traits:
+            self.weight_map[trait] += 1
+
+        result = Event(self, target, _type=e_type, value=(self, self.generate_message_trait()))
+
+        for trait in valid_traits:
+            self.weight_map[trait] -= 1
+        return result
 
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
@@ -356,11 +430,13 @@ class Person(EventObject):
         if isinstance(event, Event) and event.available:
             try:
                 if event.type == Converse.START:
+                    self.cur_tolerance = self.social_tolerance
                     self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                     _type=Converse.GENERIC,
                                                                     value=(self, self.generate_message_trait())))
                 # May need to be put into a separate method.
                 elif event.type == Converse.GENERIC and event.value[0] == self:
+                    event.consume()
                     if self.tired:
                         self.conversation.room.event_queue.append(Event(self, self.conversation,
                                                                         _type=Converse.DEPARTURE, value=self))
@@ -370,12 +446,10 @@ class Person(EventObject):
                             self.conversation.room.event_queue.append(Event(self, self.conversation.room,
                                                                             _type=Signal.DEPARTURE, value=self))
                     else:
-                        self.weight_map[event.value[1]] += 1
-                        self.conversation.room.event_queue.append(Event(self, self.conversation,
-                                                                        _type=Converse.GENERIC,
-                                                                        value=(self, self.generate_message_trait())))
-                        self.weight_map[event.value[1]] -= 1
-                        self.tired = True
+                        self.conversation.room.event_queue.append(self.generate_message_conv(self.conversation,
+                                                                                             event.value[1],
+                                                                                             _type=Converse.GENERIC))
+                        self.cur_tolerance -= 1
             except AttributeError:
                 # Look at Conversation
                 pass
