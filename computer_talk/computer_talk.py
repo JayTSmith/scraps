@@ -373,6 +373,18 @@ class Person(EventObject):
 
         return Utility.random_weighted(traits, weights)
 
+    def generate_message_conv(self, target, *buffed_traits, _type=None):
+        e_type = _type if _type is not None else Converse.DEPARTURE
+
+        for trait in buffed_traits:
+            self.weight_map[trait] += 1
+
+        result = Event(self, target, _type=e_type, value=(self, self.generate_message_trait()))
+
+        for trait in buffed_traits:
+            self.weight_map[trait] -= 1
+        return result
+
     def handle_event(self, event):
         super(Person, self).handle_event(event=event)
 
@@ -393,11 +405,9 @@ class Person(EventObject):
                             self.conversation.room.event_queue.append(Event(self, self.conversation.room,
                                                                             _type=Signal.DEPARTURE, value=self))
                     else:
-                        self.weight_map[event.value[1]] += 1
-                        self.conversation.room.event_queue.append(Event(self, self.conversation,
-                                                                        _type=Converse.GENERIC,
-                                                                        value=(self, self.generate_message_trait())))
-                        self.weight_map[event.value[1]] -= 1
+                        self.conversation.room.event_queue.append(self.generate_message_conv(self.conversation,
+                                                                                             event.value[1],
+                                                                                             _type=Converse.GENERIC))
                         self.tired = True
             except AttributeError:
                 # Look at Conversation
