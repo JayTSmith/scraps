@@ -64,13 +64,6 @@ class Utility(object):
         return None
 
 
-class EventObject(object):
-    """This class signifies that it is made to respond to Event objects. It has a generic print statement by default."""
-
-    def handle_event(self, event):
-        print('{} handled {} from {}.'.format(str(self), event, event.source))
-
-
 ###########################
 # Core Section End
 #
@@ -145,12 +138,22 @@ class MessageReactions(Enum):
                MessageTraits.SERIOUS)
 
 
+class EventObject(object):
+    """This class signifies that it is made to respond to Event objects. It has a generic print statement by default."""
+
+    def handle_event(self, event):
+        print('{} handled {} from {}.'.format(self, event, event.source))
+
+
 class Event(object):
     def __init__(self, source, target, _type=None, value=None):
+        self.name = id(self)
+
         self.source = source
         self.target = target
         self.type = _type
         self.value = value
+
         self.available = True
 
     def consume(self):
@@ -175,9 +178,10 @@ class Event(object):
         return self.available
 
     def __str__(self):
-        t = '' if not self.type else 'Type: ' + str(self.type)
+        t = '' if not self.type else 'Type: ' + self.type.value
         v = '' if not self.value else 'Value: ' + str(self.value)
-        return '({},{})'.format(t, v)
+        joined = ', '.join(filter(lambda i: i, (t, v)))
+        return 'Event {} ({})'.format(self.name, joined)
 
 
 ###########################
@@ -185,9 +189,16 @@ class Event(object):
 #
 # Program Section Begin
 ###########################
+class RegisteredMixIn(object):
+    def __init__(self, **kwargs):
+        self.name = '{} {}'.format(type(self).__name__, kwargs.get('name', id(self)))
 
-class Building(EventObject):
-    def __init__(self):
+    def __str__(self):
+        return self.name
+
+
+class Building(EventObject, RegisteredMixIn):
+    def __init__(self, **kwargs):
         super(Building, self).__init__()
         self.rooms = []
         self.people = []
@@ -207,9 +218,8 @@ class Building(EventObject):
         return
 
     def handle_event(self, event):
-        super(Building, self).handle_event(event=event)
-
         if isinstance(event, Event) and event.available:
+            print('{} occurred. | {}'.format(event, self.name))
             if event.type == Signal.IDLE:
                 for r in self.rooms:
                     idle = Event(self, r, _type=Signal.IDLE, value=None)
@@ -220,10 +230,10 @@ class Building(EventObject):
             room.handle_queue()
 
 
-class Room(EventObject):
+class Room(EventObject, RegisteredMixIn):
     base_converse_chance = 85
 
-    def __init__(self, building=None):
+    def __init__(self, building=None, **kwargs):
         super(EventObject, self).__init__()
         self.avail_people = []
         self.building = building if isinstance(building, Building) else None
@@ -232,8 +242,6 @@ class Room(EventObject):
 
     def add_people(self, *people):
         for person in people:
-            if person.name == 'NONAME-PERSON':
-                person.name = 'Person-{}'.format(len(self.avail_people))
             self.avail_people.append(person)
 
     def create_new_con(self):
@@ -241,23 +249,18 @@ class Room(EventObject):
             peeps = [Utility.rand_pop(self.avail_people), Utility.rand_pop(self.avail_people)]
             while randint(0, 1) and self.avail_people:
                 peeps.append(Utility.rand_pop(self.avail_people))
-            return Conversation(self, *peeps, name=self.new_con_name())
+            return Conversation(self, *peeps)
         else:
             return None
 
-    def new_con_name(self):
-        return 'Conversation-{}'.format(len(self.conversations))
-
     def handle_event(self, event):
-        super(Room, self).handle_event(event=event)
-
         if isinstance(event, Event) and event:
-            if event.type == Signal.IDLE:
-                # self.notify_all(IdleEvent)
+            print('{} occurred in {}. | {}'.format(event, getattr(event.source, 'name', event.source), self.name))
 
+            if event.type == Signal.IDLE:
                 # Conversation Section
                 converse_attempts = randint(1, 6)
-                print('Going to try and start {} Conversations!'.format(converse_attempts))
+                print('Going to try and start {} Conversations! | {}'.format(converse_attempts, self.name))
                 while converse_attempts and len(self.avail_people) > 1:
                     if randint(1, 100) <= Room.base_converse_chance:
                         new_con = self.create_new_con()
@@ -265,7 +268,7 @@ class Room(EventObject):
                             self.conversations.add(new_con)
                             self.event_queue.append(Event(self, new_con, _type=Converse.START))
                     converse_attempts -= 1
-                print('Now have {} Conversations.'.format(len(self.conversations)))
+                print('Now have {} Conversations. | {}'.format(len(self.conversations), self.name))
 
                 for converse in self.conversations:
                     self.event_queue.append(Event(self, converse, _type=Signal.IDLE))
@@ -285,16 +288,12 @@ class Room(EventObject):
         while self.event_queue:
             self.event_queue.pop(0).fire()
 
-    def __str__(self):
-        return 'Room(Conversations:{} People:{})'.format(len(self.conversations), len(self.avail_people))
 
-
-class Conversation(EventObject):
+class Conversation(EventObject, RegisteredMixIn):
     def __init__(self, room, *people, **kwargs):
         super(Conversation, self).__init__()
         if not isinstance(room, Room):
             raise TypeError('Argument supplied was wrong type! Required: Room')
-        self.name = kwargs.get('name', 'NONAME-CON')
 
         self.room = room
         self.people = list(people)
@@ -306,9 +305,8 @@ class Conversation(EventObject):
             person.conversation = self
 
     def handle_event(self, event):
-        super(Conversation, self).handle_event(event=event)
-
         if isinstance(event, Event) and event.available:
+            print('{} said {}. | {}'.format(event.source.name, event, self.name))
             try:
                 if event.type == Converse.START:
                     for peep in self.people:
@@ -326,10 +324,6 @@ class Conversation(EventObject):
                     other_peeps = [peep for peep in self.people if peep != self.last_talker]
                     self.room.event_queue.append(Event(event.source, other_peeps,
                                                        _type=event.type, value=(target, event.value[1])))
-                    # for peep in self.people:
-                    #     if peep != self.last_talker:
-                    #         self.room.event_queue.append(Event(event.source, peep, _type=event.type,
-                    #                                            value=(target, event.value[1])))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
@@ -343,14 +337,10 @@ class Conversation(EventObject):
                 # Means more than likely, this wasn't an event that Conversation was made to handle.
                 print(e)
 
-    def __str__(self):
-        return self.name
 
-
-class Person(EventObject):
+class Person(EventObject, RegisteredMixIn):
     def __init__(self, **kwargs):
         super(EventObject, self).__init__()
-        self.name = kwargs.get('name', 'NONAME-PERSON')
         self.conversation = None
         self.social_tolerance = 5
         self.cur_tolerance = self.social_tolerance
@@ -425,9 +415,8 @@ class Person(EventObject):
         return result
 
     def handle_event(self, event):
-        super(Person, self).handle_event(event=event)
-
         if isinstance(event, Event) and event.available:
+            print('I heard {} from {} | {}'.format(event, event.source.name, self.name))
             try:
                 if event.type == Converse.START:
                     self.cur_tolerance = self.social_tolerance
@@ -453,12 +442,6 @@ class Person(EventObject):
             except AttributeError:
                 # Look at Conversation
                 pass
-
-    def __str__(self):
-        return '{}({})'.format(self.name, str(self.conversation))
-
-    def __repr__(self):
-        return str(self)
 
 ###########################
 # Program Section End
