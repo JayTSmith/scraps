@@ -189,11 +189,17 @@ class Event(object):
 #
 # Program Section Begin
 ###########################
+class RegisteredMixIn(object):
+    def __init__(self, **kwargs):
+        self.name = '{} {}'.format(type(self).__name__, kwargs.get('name', id(self)))
 
-class Building(EventObject):
+    def __str__(self):
+        return self.name
+
+
+class Building(EventObject, RegisteredMixIn):
     def __init__(self, **kwargs):
         super(Building, self).__init__()
-        self.name = 'Building {}'.format(kwargs.get('name', id(self)))
         self.rooms = []
         self.people = []
 
@@ -224,13 +230,11 @@ class Building(EventObject):
             room.handle_queue()
 
 
-class Room(EventObject):
+class Room(EventObject, RegisteredMixIn):
     base_converse_chance = 85
 
     def __init__(self, building=None, **kwargs):
         super(EventObject, self).__init__()
-        self.name = 'Room {}'.format(kwargs.get('name', id(self)))
-
         self.avail_people = []
         self.building = building if isinstance(building, Building) else None
         self.conversations = set()
@@ -285,12 +289,11 @@ class Room(EventObject):
             self.event_queue.pop(0).fire()
 
 
-class Conversation(EventObject):
+class Conversation(EventObject, RegisteredMixIn):
     def __init__(self, room, *people, **kwargs):
         super(Conversation, self).__init__()
         if not isinstance(room, Room):
             raise TypeError('Argument supplied was wrong type! Required: Room')
-        self.name = 'Conversation {}'.format(kwargs.get('name', id(self)))
 
         self.room = room
         self.people = list(people)
@@ -339,10 +342,9 @@ class Conversation(EventObject):
                 print(e)
 
 
-class Person(EventObject):
+class Person(EventObject, RegisteredMixIn):
     def __init__(self, **kwargs):
         super(EventObject, self).__init__()
-        self.name = 'Person {}'.format(kwargs.get('name', id(self)))
         self.conversation = None
         self.social_tolerance = 5
         self.cur_tolerance = self.social_tolerance
