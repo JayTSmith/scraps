@@ -64,13 +64,6 @@ class Utility(object):
         return None
 
 
-class EventObject(object):
-    """This class signifies that it is made to respond to Event objects. It has a generic print statement by default."""
-
-    def handle_event(self, event):
-        print('{} handled {} from {}.'.format(self, event, event.source))
-
-
 ###########################
 # Core Section End
 #
@@ -143,6 +136,13 @@ class MessageReactions(Enum):
                MessageTraits.JAB)
     SILENCE = (MessageTraits.SILENCE,
                MessageTraits.SERIOUS)
+
+
+class EventObject(object):
+    """This class signifies that it is made to respond to Event objects. It has a generic print statement by default."""
+
+    def handle_event(self, event):
+        print('{} handled {} from {}.'.format(self, event, event.source))
 
 
 class Event(object):
@@ -324,10 +324,6 @@ class Conversation(EventObject, RegisteredMixIn):
                     other_peeps = [peep for peep in self.people if peep != self.last_talker]
                     self.room.event_queue.append(Event(event.source, other_peeps,
                                                        _type=event.type, value=(target, event.value[1])))
-                    # for peep in self.people:
-                    #     if peep != self.last_talker:
-                    #         self.room.event_queue.append(Event(event.source, peep, _type=event.type,
-                    #                                            value=(target, event.value[1])))
                 elif event.type == Converse.DEPARTURE:
                     if event.source in self.people and event.source.conversation == self:
                         self.people.remove(event.source)
