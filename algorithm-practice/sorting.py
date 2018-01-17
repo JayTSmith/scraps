@@ -24,15 +24,13 @@ def bubble_sort(_list):
     :param _list: The list to be sorted
     :return: The sorted list.
     """
-    length = len(_list)
-    for i in range(length - 1):
+    for i in range(len(_list) - 1):
         max_element = None
-        cutoff_point = length - i
-        active_list = _list[:cutoff_point]
+        active_list = _list[:len(_list) - i]
 
-        for j in range(cutoff_point):
+        for j in range(len(active_list)):
             if max_element is None or active_list[j] > active_list[max_element]:
                 max_element = j
 
-        swap(_list, max_element, cutoff_point - 1)
+        swap(_list, max_element, len(active_list) - 1)
     return _list
