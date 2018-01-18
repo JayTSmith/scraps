@@ -1,5 +1,7 @@
-from .algor_data import data
+from . import data
 from random import randint
+
+import timeit
 
 
 def shuffle(_list):
