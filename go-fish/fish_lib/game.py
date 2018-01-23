@@ -79,8 +79,9 @@ class GoFish(object):
         # Gotta inform the players who just asked for one.
         for idx, player in enumerate(self.players):
             if idx != self.active_player_idx and player != r_player:
-                player.hear_ask(r_face, r_player)
-                player.hear_confirm(bool(won_cards), r_face, r_player)
+                player.hear_ask(a_player=active_player, face=r_face, r_player=r_player)
+                player.hear_confirm(a_player=active_player, result=bool(won_cards), face=r_face,
+                                    r_player=r_player)
 
         if won_cards:
             print('Player {} gained {} {}(s) with {} in hand.'.format(active_player.name, len(won_cards),
