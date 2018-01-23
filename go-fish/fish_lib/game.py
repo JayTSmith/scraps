@@ -9,8 +9,7 @@ SUITS = ('Spades', 'Clubs', 'Hearts', 'Diamond')
 BASE_DECK = tuple(itertools.product(RANKS, SUITS))
 
 class GoFish(object):
-
-    def __init__(self, player_count=2, player_types=(players.DumbPlayer, )):
+    def __init__(self, player_count=2, player_types=(players.DumbPlayer, players.TryingPlayer)):
         if player_count > 8 or player_count < 2:
             raise ValueError('Player count is out of range! 2 <= player_count <= 8.')
 

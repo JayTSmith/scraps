@@ -150,7 +150,7 @@ class TryingPlayer(DumbPlayer):
             return selected_face, self.seen.get(selected_face)
 
         # If we can't make a informed play, make a unpredictable play.
-        super().ask_for_card(players)
+        return super().ask_for_card(players)
 
     def confirm_ask(self, face):
         """
