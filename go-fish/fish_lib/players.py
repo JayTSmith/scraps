@@ -44,30 +44,37 @@ class BasePlayer(object):
         """
         raise NotImplementedError('This method should be replaced by subclasses.')
 
-    def hear_ask(self, *args, **kwargs):
+    def hear_ask(self, a_player, face, r_player):
         """
         This method is intended to be called when a player asks another player for a card. This
         simulates overhearing of others.
 
-        Keyword Arguments:
-            a_player: The active player at the time of call.
-            face: The face value of the requested card.
-            r_player: The player that was asked for face.
+        Arguments:
+            a_player:
+                The active player at the time of call.
+            face:
+                The face value of the requested card.
+            r_player:
+                The player that was asked for face.
 
         Raises NotImplementedError if called.
         """
         raise NotImplementedError('This method should be replaced by subclasses.')
 
-    def hear_confirm(self, *args, **kwargs):
+    def hear_confirm(self, a_player, face, r_player, result):
         """
         This method is intended to be called as a result of another player's confirm_ask method.
         This simulates overhearing of others.
 
-        Keyword Arguments:
-            a_player: The active player at the time of call.
-            face: The face value of the requested card.
-            r_player: The player that was asked for face.
-            result: If r_player had any cards that had a face value equal to face.
+        Arguments:
+            a_player:
+                The active player at the time of call.
+            face:
+                The face value of the requested card.
+            r_player:
+                The player that was asked for face.
+            result:
+                If r_player had any cards that had a face value equal to face.
 
         Raises NotImplementedError if called.
         """
@@ -112,7 +119,7 @@ class DumbPlayer(BasePlayer):
             given_cards.append(i)
         return given_cards
 
-    def hear_ask(self, *args, **kwargs):
+    def hear_ask(self, a_player, face, r_player):
         """
         This method does nothing. This is intended behavior.
 
@@ -120,7 +127,7 @@ class DumbPlayer(BasePlayer):
         """
         pass
 
-    def hear_confirm(self, *args, **kwargs):
+    def hear_confirm(self, a_player, face, r_player, result):
         """
         This method does nothing. This is intended behavior.
 
@@ -181,7 +188,7 @@ class TryingPlayer(DumbPlayer):
             given_cards.append(i)
         return given_cards
 
-    def hear_ask(self, *args, **kwargs):
+    def hear_ask(self, a_player, face, r_player):
         """
         This method will log whoever ask for a card as the latest owner of that face value.
 
@@ -189,9 +196,9 @@ class TryingPlayer(DumbPlayer):
 
         See BasePlayer.hear_ask for detailed description of arguments.
         """
-        self.seen[kwargs.get('face')] = kwargs.get('a_player')
+        self.seen[face] = a_player
 
-    def hear_confirm(self, *args, **kwargs):
+    def hear_confirm(self, a_player, face, r_player, result):
         """
         This method will determine whether or not to clear the entry in seen for face.
 
@@ -200,5 +207,5 @@ class TryingPlayer(DumbPlayer):
         See BasePlayer.hear_confirm for detailed description of arguments.
         """
 
-        if kwargs.get('result') and kwargs.get('a_player').count_copies(kwargs.get('face')) == 4:
-            self.seen[kwargs.get('face')] = None
+        if result and a_player.count_copies(face) == 4:
+            self.seen[face] = None

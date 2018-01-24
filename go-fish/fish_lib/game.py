@@ -14,7 +14,28 @@ SUITS = ('Spades', 'Clubs', 'Hearts', 'Diamond')
 
 BASE_DECK = tuple(itertools.product(RANKS, SUITS))
 
-class GoFish(object):
+
+class BaseGame(object):
+    """
+    Serves as a sort of abstract class for Go Fish games.
+    """
+
+    def do_turn(self):
+        """
+        Runs through a single turn of Go Fish according to how it's implemented.
+        Raises NotImplementedError if called.
+        """
+        raise NotImplementedError('This method should be replaced by subclasses.')
+
+    def do_full_round(self):
+        """
+        Does a full game of Go Fish according to how it's implemented.
+        Raises NotImplementedError if called.
+        """
+        raise NotImplementedError('This method should be replaced by subclasses.')
+
+
+class BasicGoFish(BaseGame):
     """
     This is the class that runs the game of Go Fish.
 
