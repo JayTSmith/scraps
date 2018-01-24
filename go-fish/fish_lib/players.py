@@ -146,8 +146,8 @@ class TryingPlayer(DumbPlayer):
         # If the targets have cards that we have, let's try to go for them.
         if poss_targets:
             selected_face = choice(poss_targets)
-            self.seen[selected_face] = None
-            return selected_face, self.seen.get(selected_face)
+            selected_player = self.seen.pop(selected_face)
+            return selected_face, selected_player
 
         # If we can't make a informed play, make a unpredictable play.
         return super().ask_for_card(players)
