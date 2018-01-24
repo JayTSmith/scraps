@@ -58,13 +58,10 @@ class GoFish(object):
         """
         Does the active player's turn and then rotates the index to the next player.
         """
-        valid_players = [play for play in self.players if play.playing]
-        if len(valid_players) == 1:  # If only one player is left, they get all of the cards left in the deck.
-            valid_players[0].hand.extend(self.deck)
-            self.deck.clear()
+        for player in filter(lambda p: not p.hand, self.players):
+            player.playing = self.draw_card(player)
 
-            self.check_player_for_book(self.players.index(valid_players[0]))
-            return
+        valid_players = list(filter(lambda p: p.playing, self.players))
 
         # We pass the players in case the Player is keeping tracking of that.
         # requested face and requested player.
@@ -89,10 +86,7 @@ class GoFish(object):
             active_player.hand.extend(won_cards)
         else:  # If won cards is empty, then we 'go fish.'
             print('Player {} didn\'t have a {}.'.format(r_player.name, r_face))
-            if self.deck:
-                active_player.hand.append(self.deck.pop(0))
-                print('Player {} drew a {}.'.format(active_player.name,
-                                                    active_player.hand[-1][0]))  # Face value of this.
+            self.draw_card(active_player)
 
         # Increment the player index safely.
         self.active_player_idx = (self.active_player_idx + 1) % len(valid_players)
@@ -119,6 +113,21 @@ class GoFish(object):
         Returns true if none of the players are playing and if deck list is empty.
         """
         return not ([player for player in self.players if player.playing] and self.deck)
+
+    def draw_card(self, player, draw_amount=1):
+        """
+        Draws a specified number of cards to a player's hand.
+        :param player: The player who is drawing card(s).
+        :param draw_amount: The number of cards to draw.
+        :return: True if the player was able to draw. Otherwise, returns False.
+        """
+        if len(self.deck) >= draw_amount:
+            for i in range(draw_amount):
+                player.hand.append(self.deck.pop(0))
+                print('Player {} drew a {}.'.format(player.name,
+                                                    player.hand[-1][0]))
+            return True
+        return False
 
     def shuffle_deck(self):
         """

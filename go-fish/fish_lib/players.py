@@ -6,6 +6,7 @@ class BasePlayer(object):
         self.books = []
         self.hand = hand
         self.name = kwargs.get('name', repr(self))
+        self.playing = True
 
     def count_copies(self, face):
         """
@@ -17,14 +18,6 @@ class BasePlayer(object):
         for c in self.hand:
             result += 1 if c[0] == face else 0
         return result
-
-    @property
-    def playing(self):
-        """
-        Returns True if hand is not empty, otherwise returns False.
-        :return: True if instance's hand is not empty otherwise returns false.
-        """
-        return bool(self.hand)
 
     def ask_for_card(self, *args, **kwargs):
         """
@@ -141,6 +134,8 @@ class TryingPlayer(DumbPlayer):
         """
         # Find out which targets have cards that we've seen before.
         poss_targets = set(self.seen.keys()).intersection((card[0] for card in self.hand))
+
+        # Also find out if they are still in the game.
         poss_targets = list(filter(lambda f: self.seen.get(f) in players, poss_targets))
 
         # If the targets have cards that we have, let's try to go for them.
