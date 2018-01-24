@@ -1,3 +1,9 @@
+"""
+This sets the framework for a game of GoFish.
+
+Author: Justin Smith
+Date: 1/23/18
+"""
 import itertools
 from random import choice, randint
 
@@ -9,9 +15,19 @@ SUITS = ('Spades', 'Clubs', 'Hearts', 'Diamond')
 BASE_DECK = tuple(itertools.product(RANKS, SUITS))
 
 class GoFish(object):
+    """
+    This is the class that runs the game of Go Fish.
+
+    Keyword Parameters:
+        player_count: int
+            The number of players to create to start the game.
+            Bounds: 2 <= player_count <= 10
+        player_types: Player
+            The classes of players that we can create.
+    """
     def __init__(self, player_count=2, player_types=(players.DumbPlayer, players.TryingPlayer)):
-        if player_count > 8 or player_count < 2:
-            raise ValueError('Player count is out of range! 2 <= player_count <= 8.')
+        if player_count > 10 or player_count < 2:
+            raise ValueError('Player count is out of range! 2 <= player_count <= 10.')
 
         self.deck = list(BASE_DECK)
         self.shuffle_deck()
@@ -29,6 +45,11 @@ class GoFish(object):
 
     @staticmethod
     def card_to_string(card):
+        """
+        Prints a card tuple in a human-readable string.
+        :param card: The card tuple in format (RANK, SUIT).
+        :return: A string in how a person would say it.
+        """
         return '{} of {}'.format(card[0], card[1])
 
     def check_player_for_book(self, player_idx):
@@ -38,8 +59,8 @@ class GoFish(object):
         """
         player = self.players[player_idx]
         for book in filter(lambda f: player.count_copies(f) == 4, RANKS):
-            for c in itertools.product((book,), SUITS):
-                player.hand.remove(c)
+            for card in itertools.product((book,), SUITS):
+                player.hand.remove(card)
             player.books.append(book)
 
     def check_all_players_for_books(self):
@@ -80,7 +101,8 @@ class GoFish(object):
                                     r_player=r_player)
 
         if won_cards:
-            print('Player {} gained {} {}(s) with {} in hand.'.format(active_player.name, len(won_cards),
+            print('Player {} gained {} {}(s) with {} in hand.'.format(active_player.name,
+                                                                      len(won_cards),
                                                                       r_face,
                                                                       active_player.count_copies(r_face)))
             active_player.hand.extend(won_cards)
@@ -138,6 +160,14 @@ class GoFish(object):
 
     @property
     def winner(self):
+        """
+        The winner(s) of the game.
+
+        If the game is not done, this will return None. This can also return multiple players
+        because of ties.
+
+        :return: The player(s) objects that won.
+        """
         if not self.done:
             return None
 

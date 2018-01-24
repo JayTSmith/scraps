@@ -1,7 +1,16 @@
+"""
+The types of players that can be found in a game of Go Fish.
+
+Author: Justin Smith
+Date: 1/23/18
+"""
 from random import choice
 
 
 class BasePlayer(object):
+    """
+    This class shows the method that every Player subclass should implement.
+    """
     def __init__(self, hand: list, **kwargs):
         self.books = []
         self.hand = hand
@@ -15,11 +24,11 @@ class BasePlayer(object):
         :return: the number of copies.
         """
         result = 0
-        for c in self.hand:
-            result += 1 if c[0] == face else 0
+        for card in self.hand:
+            result += 1 if card[0] == face else 0
         return result
 
-    def ask_for_card(self, *args, **kwargs):
+    def ask_for_card(self, players: list):
         """
         This method is intended to be called when a player asks for a card.
 
@@ -27,7 +36,7 @@ class BasePlayer(object):
         """
         raise NotImplementedError('This method should be replaced by subclasses.')
 
-    def confirm_ask(self, *args, **kwargs):
+    def confirm_ask(self, face):
         """
         This method is intended to be called when a player is asked for a card.
 
@@ -66,8 +75,10 @@ class BasePlayer(object):
 
 
 class DumbPlayer(BasePlayer):
-    def __init__(self, hand, **kwargs):
-        super(DumbPlayer, self).__init__(hand, **kwargs)
+    """
+    This type of player will use no strategy to play the game. It just makes
+    calls and follows the rules.
+    """
 
     def ask_for_card(self, players: list):
         """
@@ -119,6 +130,11 @@ class DumbPlayer(BasePlayer):
 
 
 class TryingPlayer(DumbPlayer):
+    """
+    This player will track who made what calls for cards. If they've heard a
+    call for a card they need, they mark the player who made it as a target.
+    Also, this player follows the rules of the game.
+    """
     def __init__(self, hand, **kwargs):
         super(TryingPlayer, self).__init__(hand, **kwargs)
         self.seen = {}  # Data is stored as face value: player last seen with it.
