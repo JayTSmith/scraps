@@ -152,8 +152,11 @@ class TryingPlayer(DumbPlayer):
 
         This method will attempt to locate other players that have possible combinations
         with this player's hand. If none are found, resort back to random guessing.
-        :param players:
-        :return:
+        Parameters:
+            players:
+                A list of valid players to choose from. Please note, self is more than
+                likely included.
+        :return: A tuple with 2 elements, a face value and the player to request the card from.
         """
         # Find out which targets have cards that we've seen before.
         poss_targets = set(self.seen.keys()).intersection((card[0] for card in self.hand))
