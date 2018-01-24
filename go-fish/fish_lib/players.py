@@ -114,7 +114,7 @@ class DumbPlayer(BasePlayer):
         :return: All of the cards that have the same face value.
         """
         given_cards = []
-        for i in (card for card in self.hand if card[0] == face):
+        for i in list(filter(lambda c: c[0] == face, self.hand)):
             self.hand.remove(i)
             given_cards.append(i)
         return given_cards
@@ -182,11 +182,7 @@ class TryingPlayer(DumbPlayer):
 
         :return: All of the cards that have the same face value.
         """
-        given_cards = []
-        for i in (card for card in self.hand if card[0] == face):
-            self.hand.remove(i)
-            given_cards.append(i)
-        return given_cards
+        return super().confirm_ask(face)
 
     def hear_ask(self, a_player, face, r_player):
         """

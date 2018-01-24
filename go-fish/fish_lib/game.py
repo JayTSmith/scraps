@@ -73,12 +73,11 @@ class BasicGoFish(BaseGame):
         """
         return '{} of {}'.format(card[0], card[1])
 
-    def check_player_for_book(self, player_idx):
+    def check_player_for_book(self, player):
         """
         Checks if a certain player has a book. If one is found,
         then it is removed from the player's hand and added to their book list.
         """
-        player = self.players[player_idx]
         for book in filter(lambda f: player.count_copies(f) == 4, RANKS):
             for card in itertools.product((book,), SUITS):
                 player.hand.remove(card)
@@ -89,25 +88,24 @@ class BasicGoFish(BaseGame):
         Checks every players' hand for a book (group of matching faces). If one is found,
         then it is removed from the player's hand and added to their book list.
         """
-        _map = map(self.check_player_for_book, range(0, len(self.players)))
-        while 1:
-            try:
-                next(_map)
-            except StopIteration:
-                break
+        for player in self.players:
+            self.check_player_for_book(player)
 
     def do_turn(self):
         """
         Does the active player's turn and then rotates the index to the next player.
         """
-        for player in filter(lambda p: not p.hand, self.players):
-            player.playing = self.draw_card(player)
+        active_player = self.players[self.active_player_idx]
+        # Check if the player can play, otherwise skip to the next person's turn.
+        if not active_player.hand and not self.draw_card(active_player):
+            active_player.playing = False
+            self.active_player_idx = (self.active_player_idx + 1) % len(self.players)
+            return
 
         valid_players = list(filter(lambda p: p.playing, self.players))
 
         # We pass the players in case the Player is keeping tracking of that.
         # requested face and requested player.
-        active_player = valid_players[self.active_player_idx]
         r_face, r_player = active_player.ask_for_card(valid_players)
 
         print('Player {} asked for a {} from Player {}.'.format(active_player.name, r_face,
@@ -115,11 +113,10 @@ class BasicGoFish(BaseGame):
         won_cards = r_player.confirm_ask(r_face)
 
         # Gotta inform the players who just asked for one.
-        for idx, player in enumerate(self.players):
-            if idx != self.active_player_idx and player != r_player:
-                player.hear_ask(a_player=active_player, face=r_face, r_player=r_player)
-                player.hear_confirm(a_player=active_player, result=bool(won_cards), face=r_face,
-                                    r_player=r_player)
+        for idx, player in enumerate(valid_players):
+            if player != active_player and player != r_player:
+                player.hear_ask(active_player, r_face, r_player)
+                player.hear_confirm(active_player, bool(won_cards), r_face, r_player)
 
         if won_cards:
             print('Player {} gained {} {}(s) with {} in hand.'.format(active_player.name,
@@ -132,10 +129,10 @@ class BasicGoFish(BaseGame):
             self.draw_card(active_player)
 
         # Increment the player index safely.
-        self.active_player_idx = (self.active_player_idx + 1) % len(valid_players)
+        self.active_player_idx = (self.active_player_idx + 1) % len(self.players)
 
         # Check for books
-        self.check_all_players_for_books()
+        self.check_player_for_book(active_player)
 
     def do_full_round(self):
         """
@@ -155,7 +152,7 @@ class BasicGoFish(BaseGame):
         """
         Returns true if none of the players are playing and if deck list is empty.
         """
-        return not ([player for player in self.players if player.playing] and self.deck)
+        return not ([player for player in self.players if player.playing] or self.deck)
 
     def draw_card(self, player, draw_amount=1):
         """
