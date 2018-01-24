@@ -97,12 +97,13 @@ class BasicGoFish(BaseGame):
         Does the active player's turn and then rotates the index to the next player.
         """
         active_player = self.players[self.active_player_idx]
-        # Check if the player can play, otherwise skip to the next person's turn.
-        if not active_player.hand and not self.draw_card(active_player):
-            print('Skipping Player {}\'s turn.'.format(active_player.name))
-            active_player.playing = False
+
+        if not active_player.playing:
             self.active_player_idx = (self.active_player_idx + 1) % len(self.players)
             return
+
+        if not active_player.hand:
+            self.draw_card(active_player)
 
         valid_players = list(filter(lambda p: p.playing, self.players))
 
@@ -135,6 +136,11 @@ class BasicGoFish(BaseGame):
 
         # Check for books
         self.check_player_for_book(active_player)
+
+        # To speed up the game, let's just mark if they can continue playing here.
+        if not self.deck:
+            r_player.playing = bool(r_player.hand)
+            active_player.playing = bool(active_player.hand)
 
     def do_full_round(self):
         """
