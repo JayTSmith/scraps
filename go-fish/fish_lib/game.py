@@ -73,7 +73,8 @@ class BasicGoFish(BaseGame):
         """
         return '{} of {}'.format(card[0], card[1])
 
-    def check_player_for_book(self, player):
+    @staticmethod
+    def check_player_for_book(player):
         """
         Checks if a certain player has a book. If one is found,
         then it is removed from the player's hand and added to their book list.
@@ -116,7 +117,7 @@ class BasicGoFish(BaseGame):
         won_cards = r_player.confirm_ask(r_face)
 
         # Gotta inform the players who just asked for one.
-        for idx, player in enumerate(valid_players):
+        for player in valid_players:
             if player != active_player and player != r_player:
                 player.hear_ask(active_player, r_face, r_player)
                 player.hear_confirm(active_player, bool(won_cards), r_face, r_player)
@@ -178,10 +179,12 @@ class BasicGoFish(BaseGame):
         :return: True if the player was able to draw. Otherwise, returns False.
         """
         if len(self.deck) >= draw_amount:
-            for i in range(draw_amount):
+            i = 0
+            while i < draw_amount:
                 player.hand.append(self.deck.pop(0))
                 print('Player {} drew a {}.'.format(player.name,
                                                     player.hand[-1][0]))
+                i += 1
             return True
         return False
 
