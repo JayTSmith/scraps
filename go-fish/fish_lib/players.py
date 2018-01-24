@@ -173,20 +173,6 @@ class TryingPlayer(DumbPlayer):
         # If we can't make a informed play, make a unpredictable play.
         return super().ask_for_card(players)
 
-    def confirm_ask(self, face):
-        """
-        This method is intended to be called when a player is asked for a card.
-
-        This method will hand over all of the cards as asked.
-
-        Parameters:
-            face:
-                The requested face value.
-
-        :return: All of the cards that have the same face value.
-        """
-        return super().confirm_ask(face)
-
     def hear_ask(self, a_player, face, r_player):
         """
         This method will log whoever ask for a card as the latest owner of that face value.
