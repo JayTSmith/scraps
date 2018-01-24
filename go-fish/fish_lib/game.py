@@ -98,12 +98,12 @@ class BasicGoFish(BaseGame):
         """
         active_player = self.players[self.active_player_idx]
 
+        if not active_player.hand:
+            active_player.playing = self.draw_card(active_player)
+
         if not active_player.playing:
             self.active_player_idx = (self.active_player_idx + 1) % len(self.players)
             return
-
-        if not active_player.hand:
-            self.draw_card(active_player)
 
         valid_players = list(filter(lambda p: p.playing, self.players))
 
@@ -131,8 +131,14 @@ class BasicGoFish(BaseGame):
             print('Player {} didn\'t have a {}.'.format(r_player.name, r_face))
             self.draw_card(active_player)
 
-        # Increment the player index safely.
-        self.active_player_idx = (self.active_player_idx + 1) % len(self.players)
+        # Increment active player index to the next valid player according to the list.
+        # This list isn't always going to be right since we have to check books
+        # right after but it's closer than the alternative.
+        val_idx = valid_players.index(active_player) + 1
+        if val_idx == len(valid_players):
+            val_idx = 0
+        self.active_player_idx = self.players.index(valid_players[val_idx])
+
 
         # Check for books
         self.check_player_for_book(active_player)
