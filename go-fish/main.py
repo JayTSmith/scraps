@@ -4,7 +4,7 @@ The executable test script for fish_lib.
 Author: Justin Smith
 Date: 1/23/18
 """
-from fish_lib import game
+from fish_lib.factory import GoFishFactory as factory
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
     Executed when the script is ran as an executable script.
     :return: The fish_lib.BaseGame object created for testing.
     """
-    fish = game.BasicGoFish(player_count=6)
+    fish = factory.build_basic_game(player_count=6)
     fish.do_full_round()
 
     line_sep_char = '#'
@@ -29,7 +29,7 @@ def prof_main():
 
     prof = Profile()
     prof.enable()
-    fish = game.BasicGoFish(player_count=2)
+    fish = factory.build_basic_game(player_count=6)
     fish.do_full_round()
     prof.disable()
 
