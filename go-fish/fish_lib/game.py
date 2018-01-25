@@ -160,7 +160,8 @@ class BasicGoFish(BaseGame):
         """
         This method calls do_turn until done is True.
 
-        This simulates an actual game of Go Fish.
+        This simulates an actual game of Go Fish. There is a iteration limit of 100000 in case of
+        logic failure.
 
         :return: the winning player obj
         """
