@@ -11,6 +11,9 @@ class BasePlayer(object):
     """
     This class shows the method that every Player subclass should implement.
     """
+
+    LIMIT = float('inf')
+
     def __init__(self, hand: list, **kwargs):
         self.books = []
         self.hand = hand
@@ -194,3 +197,37 @@ class TryingPlayer(DumbPlayer):
 
         if result and a_player.count_copies(face) == 4:
             self.seen[face] = None
+
+
+class StingyPlayer(DumbPlayer):
+    """
+    This player will lie about having cards in order to hold on to them. (aka be stingy.)
+    They will deny having the same face up to 2 times in the same game before giving up.
+    Games should limit themselves to one StringyPlayer in case of deadlock.
+    """
+
+    LIMIT = 1
+
+    def __init__(self, hand, limit=2, **kwargs):
+        super(StingyPlayer, self).__init__(hand, **kwargs)
+        self.deny_limit = limit
+        self.denied = {}
+
+    def confirm_ask(self, face):
+        """
+        Returns nothing if they haven't denied it twice already.
+
+        The player will have to deny the face while they have it to count as a denial.
+        Once the player goes over their limit for denials, they will hand over the card(s)
+        for the rest of the game.
+
+        Parameters:
+            face:
+                The requested face value.
+
+        :return: An empty list or a list of the cards requested.
+        """
+        if self.count_copies(face) and self.denied.get(face, 0) < self.deny_limit:
+            self.denied[face] = self.denied.get(face, 0) + 1
+            return []
+        return super().confirm_ask(face)

@@ -46,7 +46,10 @@ class BasicGoFish(BaseGame):
         player_types: Player
             The classes of players that we can create.
     """
-    def __init__(self, player_count=2, player_types=(players.DumbPlayer, players.TryingPlayer)):
+
+    def __init__(self, player_count=2, player_types=(players.DumbPlayer,
+                                                     players.TryingPlayer,
+                                                     players.StingyPlayer)):
         if player_count > 10 or player_count < 2:
             raise ValueError('Player count is out of range! 2 <= player_count <= 10.')
 
@@ -57,11 +60,15 @@ class BasicGoFish(BaseGame):
         self.players = []
 
         card_count = 5 if player_count > 4 else 7
+        player_type_count = {}
         for i in range(player_count):
             player_hand = self.deck[:card_count]
-            player_type = choice(player_types)(player_hand, name=str(i + 1))
+            # Keep getting a new valid list of classes that aren't at their limit.
+            player_type = choice([cls for cls in player_types
+                                  if player_type_count.get(cls, 0) < cls.LIMIT])
+            player_type_count[player_type] = player_type_count.get(player_type, 0) + 1
 
-            self.players.append(player_type)
+            self.players.append(player_type(player_hand, name=str(i + 1)))
             self.deck = self.deck[card_count:]
 
     @staticmethod
