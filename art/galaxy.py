@@ -2,7 +2,7 @@ import os.path
 import random
 from math import cos, pi
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 class Fader(object):
@@ -43,7 +43,7 @@ class Fader(object):
         if bc < 0:
             return 0
 
-        raw = a * (bc ** (1/2)) + d
+        raw = a * (bc ** (1 / 2)) + d
         return round(alpha * Fader.percent_float(raw))
 
     @staticmethod
@@ -83,7 +83,7 @@ def draw_faded_circle(img: Image, xy: tuple, radius, fill: tuple, fader: callabl
 
 
 # Circles are the amount of circles to draw in the blob area.
-def draw_blob(img, xy: tuple, circles:int, radius, fill: tuple, fader: callable = None, variance: int = None):
+def draw_blob(img, xy: tuple, circles: int, radius, fill: tuple, fader: callable = None, variance: int = None):
     if variance is None:
         variance = 0
     cur_img = img
@@ -122,30 +122,74 @@ def draw_stars(img, fill: tuple, fader: callable = None, frequency: int = None,
     return cur_img
 
 
-def test_build(path, overwrite=None):
+def test_build():
     colors = {
+        'text': (128, 128, 128, 255),
         'star-white': (150, 150, 150, 255),
         'purple': (20, 0, 90, 255),
         'pink': (120, 0, 90, 255)
     }
 
+    if not os.path.isdir('./test'):
+        os.mkdir('./test')
+
     faders = [getattr(Fader, fader) for fader in dir(Fader) if fader.startswith('fade_')]
-    img_size = len(faders) * 150
-    raw_img = Image.new('RGBA', (img_size, 100), color=(0, 0, 0, 255))
+    filters = [x for x in dir(ImageFilter) if x.isupper()]
+    img_width = len(faders) * 150
+
+    raw_img = Image.new('RGBA', (img_width, 100), color=(0, 0, 0, 255))
+
+    # Drawing Guidelines at every 50 pixels
     raw_draw = ImageDraw.Draw(raw_img)
-    for i in range(49, img_size, 50):
+    for i in range(49, img_width, 50):
         start = (i, 0)
         end = (i, raw_img.height)
         raw_draw.line((start, end), fill=colors['pink'])
 
+    # Drawing a 100px white circle with every fader available.
     for idx, fader in enumerate(faders):
         work_x = 49 + (100 * idx)
         raw_img = draw_faded_circle(raw_img, (work_x, 49), 50, colors['star-white'], fader=fader)
-    os.remove(path)
-    raw_img.save(path)
+
+    # Apply every filter on the final image.
+    for filt in filters:
+        filt_path = os.path.join('test', filt + '.png')
+        if os.path.exists(filt_path):
+            os.remove(filt_path)
+        raw_img.filter(getattr(ImageFilter, filt)).save(filt_path)
+
+    raw_path = os.path.join('test', 'NO_FILTER.png')
+    if os.path.exists(raw_path):
+        os.remove(raw_path)
+    raw_img.save(raw_path)
+
+    if filters:
+        stitch_height = (len(filters) + 1) * 100
+        stitch_img = Image.new('RGBA', (img_width, stitch_height))
+        filters.insert(0, 'NO_FILTER')
+
+        stitch_img.paste(raw_img, (0, 0))
+
+        for idx, filt in enumerate(filters):
+            filt_img = Image.open(os.path.join('test', filt + '.png'), mode='r')
+            filt_pos = (0, (99 * idx + idx))
+
+            text_img = Image.new('RGBA', filt_img.size)
+            # The most used color found in the filtered images
+            max_color = sorted(filt_img.getcolors(maxcolors=65536), key=lambda e: e[0], reverse=True)[0][1]
+            # Get the negative of the most used color so that the text will always show.
+            text_color = (255 - max_color[0], 255 - max_color[1], 255 - max_color[2], 255)
+            ImageDraw.Draw(text_img).text((5, 5), filt,
+                                          font=ImageFont.truetype(font='LiberationMono-Regular.ttf', size=12),
+                                          fill=text_color)
+
+            out = Image.alpha_composite(filt_img, text_img)
+
+            stitch_img.paste(out, filt_pos)
+        stitch_img.save(os.path.join('test', 'stitch.png'))
 
 
-def build_galaxy(path, img_size:int, overwrite=None):
+def build_galaxy(path, img_size: int, overwrite=None):
     if os.path.exists(path) and not (overwrite or os.path.isfile(path)):
         return
 
@@ -159,7 +203,7 @@ def build_galaxy(path, img_size:int, overwrite=None):
     center = img_size // 2 - 1
 
     cube_root = lambda a, s: Fader.cubic_root(a, s, a=6, b=1, c=54, d=24)
-    sq_root = lambda a,s: Fader.square_root(a, s)
+    sq_root = lambda a, s: Fader.square_root(a, s)
 
     # raw_img = draw_faded_circle(raw_img, (199, 199), 100, colors['purple'], fader=Fader.parabola)
     # raw_img = draw_faded_circle(raw_img, (399, 199), 100, colors['purple'], fader=Fader.random)
@@ -168,10 +212,10 @@ def build_galaxy(path, img_size:int, overwrite=None):
 
     raw_img = draw_stars(raw_img, colors['star-white'], fader=Fader.ease_out, frequency=100)
     raw_img = draw_blob(raw_img, (center, center), 300, 10, colors['purple'], fader=cube_root, variance=100)
-    raw_img = draw_blob(raw_img, (center, center), 100, 100, colors['pink'], fader=sq_root, variance=center+1)
+    raw_img = draw_blob(raw_img, (center, center), 100, 100, colors['pink'], fader=sq_root, variance=center + 1)
     os.remove(path)
     raw_img.save(path)
 
 
 if __name__ == '__main__':
-    test_build('galaxy.png', overwrite=True)
+    test_build()
