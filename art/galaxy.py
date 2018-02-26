@@ -58,6 +58,14 @@ class Fader(object):
     def fade_abs_sin(alpha: int, step: int):
         return round(alpha * cos(Fader.percent_float(step) * pi))
 
+    @staticmethod
+    def fade_smoothed(alpha: int, step: int, smooth_step=None):
+        if smooth_step is None:
+            smooth_step = 5.0
+        percent = Fader.percent_float(round(step / smooth_step) * smooth_step)
+        return round(alpha * percent)
+
+
 
 def draw_faded_circle(img: Image, xy: tuple, radius, fill: tuple, fader: callable = None):
     if fader is None:
