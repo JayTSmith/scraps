@@ -1,6 +1,6 @@
 import os.path
 import random
-from math import cos, floor, sin, pi, pow
+from math import cos, pi
 
 from PIL import Image, ImageDraw
 
@@ -11,11 +11,11 @@ class Fader(object):
         return percent / 100
 
     @staticmethod
-    def linear(alpha: int, step: int):
+    def fade_linear(alpha: int, step: int):
         return round(alpha * Fader.percent_float(step))
 
     @staticmethod
-    def cubic_root(alpha: int, step: int, a=None, b=None, c=None, d=None):
+    def fade_cubic_root(alpha: int, step: int, a=None, b=None, c=None, d=None):
         a = a or 1
         b = b or 1
         c = c or 0
@@ -33,7 +33,7 @@ class Fader(object):
         return round(alpha * Fader.percent_float(raw))
 
     @staticmethod
-    def square_root(alpha: int, step: int, a=None, b=None, c=None, d=None):
+    def fade_square_root(alpha: int, step: int, a=None, b=None, c=None, d=None):
         a = a or 1
         b = b or 1
         c = c or 0
@@ -47,28 +47,26 @@ class Fader(object):
         return round(alpha * Fader.percent_float(raw))
 
     @staticmethod
-    def parabola(alpha: int, step: int):
+    def fade_parabola(alpha: int, step: int):
         return round(alpha * Fader.percent_float(step) ** 2)
 
     @staticmethod
-    def stupid_multiple(alpha: int, step: int):
-        return (alpha * step) % 256
-
-    @staticmethod
-    def random(alpha: int, step: int):
+    def fade_random(alpha: int, step: int):
         return round(alpha * random.random())
 
     @staticmethod
-    def abs_sin(alpha: int, step: int):
+    def fade_abs_sin(alpha: int, step: int):
         return round(alpha * cos(Fader.percent_float(step) * pi))
 
 
 def draw_faded_circle(img: Image, xy: tuple, radius, fill: tuple, fader: callable = None):
     if fader is None:
-        fader = Fader.linear
+        fader = Fader.fade_linear
 
     new_layer = Image.new('RGBA', img.size)
     cir_drawer = ImageDraw.Draw(new_layer)
+
+    print('Drawing a circle at {0}, {1} with a radius of {2} using fader {3}'.format(*xy, radius, fader.__name__))
 
     for i in range(100, 0, -1):
         work_alpha = fader(fill[3], 100 - i)
@@ -76,7 +74,7 @@ def draw_faded_circle(img: Image, xy: tuple, radius, fill: tuple, fader: callabl
         if not work_radius:
             break
         pos = (xy[0] - work_radius, xy[1] - work_radius, xy[0] + work_radius, xy[1] + work_radius)
-        print('{0}-th step| Alpha: {1} Size: {2}'.format(i, work_alpha, pos[2] - pos[0]))
+        # print('{0}-th step| Alpha: {1} Size: {2}'.format(i, work_alpha, pos[2] - pos[0]))
         _fill = (fill[0], fill[1], fill[2], work_alpha)
         cir_drawer.ellipse(pos, fill=_fill)
 
@@ -102,9 +100,9 @@ def draw_blob(img, xy: tuple, circles:int, radius, fill: tuple, fader: callable 
 def draw_stars(img, fill: tuple, fader: callable = None, frequency: int = None,
                max_radius: int = None, min_radius: int = None, variance: int = None):
     cur_img = img
-    fader = fader or Fader.linear
+    fader = fader or Fader.fade_linear
     min_radius = min_radius or min(img.height, img.width) * .05
-    max_radius = max_radius or min_radius ** 2
+    max_radius = max_radius or min_radius * 2
     frequency = frequency or 50
     variance = variance or min_radius
 
@@ -124,11 +122,32 @@ def draw_stars(img, fill: tuple, fader: callable = None, frequency: int = None,
     return cur_img
 
 
+def test_build(path, overwrite=None):
+    colors = {
+        'star-white': (150, 150, 150, 255),
+        'purple': (20, 0, 90, 255),
+        'pink': (120, 0, 90, 255)
+    }
+
+    faders = [getattr(Fader, fader) for fader in dir(Fader) if fader.startswith('fade_')]
+    img_size = len(faders) * 150
+    raw_img = Image.new('RGBA', (img_size, 100), color=(0, 0, 0, 255))
+    raw_draw = ImageDraw.Draw(raw_img)
+    for i in range(49, img_size, 50):
+        start = (i, 0)
+        end = (i, raw_img.height)
+        raw_draw.line((start, end), fill=colors['pink'])
+
+    for idx, fader in enumerate(faders):
+        work_x = 49 + (100 * idx)
+        raw_img = draw_faded_circle(raw_img, (work_x, 49), 50, colors['star-white'], fader=fader)
+    os.remove(path)
+    raw_img.save(path)
+
+
 def build_galaxy(path, img_size:int, overwrite=None):
-    if os.path.exists(path):
-        if not (overwrite or os.path.isfile(path)):
-            return
-        os.remove(path)
+    if os.path.exists(path) and not (overwrite or os.path.isfile(path)):
+        return
 
     colors = {
         'star-white': (150, 150, 150, 255),
@@ -139,20 +158,20 @@ def build_galaxy(path, img_size:int, overwrite=None):
     raw_img = Image.new('RGBA', (img_size, img_size), color=(0, 0, 0, 255))
     center = img_size // 2 - 1
 
-
     cube_root = lambda a, s: Fader.cubic_root(a, s, a=6, b=1, c=54, d=24)
     sq_root = lambda a,s: Fader.square_root(a, s)
 
     # raw_img = draw_faded_circle(raw_img, (199, 199), 100, colors['purple'], fader=Fader.parabola)
     # raw_img = draw_faded_circle(raw_img, (399, 199), 100, colors['purple'], fader=Fader.random)
     # raw_img = draw_faded_circle(raw_img, (799, 199), 100, colors['purple'])
-    #raw_img = draw_faded_circle(raw_img, (499, 499), 100, colors['purple'], fader=cube_root)
+    # raw_img = draw_faded_circle(raw_img, (499, 499), 100, colors['purple'], fader=cube_root)
 
-    raw_img = draw_stars(raw_img, colors['star-white'], fader=Fader.parabola, frequency=20)
-    raw_img = draw_blob(raw_img, (center, center), 300, 100, colors['purple'], fader=cube_root, variance=100)
+    raw_img = draw_stars(raw_img, colors['star-white'], fader=Fader.ease_out, frequency=100)
+    raw_img = draw_blob(raw_img, (center, center), 300, 10, colors['purple'], fader=cube_root, variance=100)
     raw_img = draw_blob(raw_img, (center, center), 100, 100, colors['pink'], fader=sq_root, variance=center+1)
+    os.remove(path)
     raw_img.save(path)
 
 
 if __name__ == '__main__':
-    build_galaxy('galaxy.png', 1000, overwrite=True)
+    test_build('galaxy.png', overwrite=True)
