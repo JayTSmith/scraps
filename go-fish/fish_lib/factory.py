@@ -43,7 +43,7 @@ class GoFishFactory:
         return game.BasicGoFish(b_players)
 
     @staticmethod
-    def run_silent_game():
+    def run_silent_game(**kwargs):
         """
         Suppresses all of the print statements made by game.BasicGoFish during a call of
         do_full_round.
@@ -51,7 +51,7 @@ class GoFishFactory:
         Made for testing purposes because I'm getting annoyed at scrolling.
         :return: An instance of game.BasicGoFish
         """
-        b_game = GoFishFactory.build_basic_game()
+        b_game = GoFishFactory.build_basic_game(**kwargs)
 
         real_out = sys.stdout
         sys.stdout = StringIO()
