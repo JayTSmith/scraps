@@ -4,6 +4,8 @@ The executable test script for fish_lib.
 Author: Justin Smith
 Date: 1/23/18
 """
+import sys
+
 from fish_lib.factory import GoFishFactory as factory
 
 
@@ -29,8 +31,7 @@ def prof_main():
 
     prof = Profile()
     prof.enable()
-    fish = factory.build_basic_game(player_count=6)
-    fish.do_full_round()
+    fish = factory.run_silent_game(player_count=6)
     prof.disable()
 
     line_sep_char = '#'
@@ -46,4 +47,7 @@ def prof_main():
 
 if __name__ == '__main__':
     # Used if the script is used in an interactive environment
-    prof_main()
+    if '-p' in sys.argv:
+        prof_main()
+    else:
+        main()
