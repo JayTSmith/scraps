@@ -11,6 +11,9 @@ class BasePlayer(object):
     """
     This class shows the method that every Player subclass should implement.
     """
+
+    LIMIT = float('inf')
+
     def __init__(self, hand: list, **kwargs):
         self.books = []
         self.hand = hand
@@ -194,3 +197,120 @@ class TryingPlayer(DumbPlayer):
 
         if result and a_player.count_copies(face) == 4:
             self.seen[face] = None
+
+
+class StingyPlayer(DumbPlayer):
+    """
+    This player will lie about having cards in order to hold on to them. (aka be stingy.)
+    They will deny having the same face up to 2 times in the same game before giving up.
+    Games should limit themselves to one StringyPlayer in case of deadlock.
+    """
+
+    LIMIT = 1
+
+    def __init__(self, hand, limit=2, **kwargs):
+        super(StingyPlayer, self).__init__(hand, **kwargs)
+        self.deny_limit = limit
+        self.denied = {}
+
+    def confirm_ask(self, face):
+        """
+        Returns nothing if they haven't denied it twice already.
+
+        The player will have to deny the face while they have it to count as a denial.
+        Once the player goes over their limit for denials, they will hand over the card(s)
+        for the rest of the game.
+
+        Parameters:
+            face:
+                The requested face value.
+
+        :return: An empty list or a list of the cards requested.
+        """
+        if self.count_copies(face) and self.denied.get(face, 0) < self.deny_limit:
+            self.denied[face] = self.denied.get(face, 0) + 1
+            return []
+        return super().confirm_ask(face)
+
+
+class UserPlayer(DumbPlayer):
+    """
+    This player will be controlled by the user.
+    There will be prompts and the user will have to type in the input in order to react.
+    """
+
+    LIMIT = 1
+
+    def ask_for_card(self, players: list):
+        """
+        Allows the user to ask any valid player for a card.
+
+        Valid players are players that still playing and that are not the user themselves.
+        The user can type the letter 'h' at any prompt to display the options again.
+
+        Parameters:
+            players:
+                A list of valid players to choose from. Please note, self is more than
+                likely included.
+        :return: A tuple with 2 elements, a face value and the player to request the card from.
+        """
+        # Let's get the faces in the hand.
+        faces = {}
+
+        for card in self.hand:
+            faces[card[0]] = self.count_copies(card[0])
+
+        def print_info():
+            for idx, player in enumerate(players):
+                print('{0}) Player {1}'.format(idx, player.name))
+            face_str_args = ('{1} {0}\'s'.format(*item) for item in faces.items())
+            print('Your hand: {}'.format(', '.join(face_str_args)))
+
+        players = [player for player in players if player != self]
+        print_info()
+
+        player_index = len(players)
+        while player_index >= len(players):
+            try:
+                player_index = int(input('What player would you like to ask for a card? '))
+            except ValueError:
+                if player_index == 'h':
+                    print_info()
+                else:
+                    print('That wasn\'t a number.')
+
+        r_card = None
+        while r_card not in faces:
+            if r_card == 'h':
+                print_info()
+            elif r_card is not None:
+                print('That card is not in your hand!')
+            r_card = input('What card would you like to ask for? ')
+
+        return r_card, players[player_index]
+
+    def confirm_ask(self, face):
+        """
+        This method is called when the player is asked for a card.
+
+        The user can either confirm or deny if they have the requested face value.
+        If they do not or they deny it, returns an empty list.
+        If they give up their cards, it returns a list of cards with a matching face value.
+
+        Parameters:
+            face:
+                The requested face value.
+
+        :return: An empty list or a list of the cards requested.
+        """
+        print('You were asked for a {}.'.format(face))
+        posess = self.count_copies(face)
+        print('You have {}.'.format(posess))
+
+        if posess:
+            if input('Do you give up your cards? [Y/n] ').lower().strip() == 'n':
+                print('You denied that you have a {}.'.format(face))
+                return []
+            else:
+                print('You gave up your {} {}(s).'.format(posess, face))
+                return super().confirm_ask(face)

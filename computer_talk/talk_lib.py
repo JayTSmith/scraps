@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# File Name: computer_talk.py
+# File Name: talk_lib.py
 # Author: Justin Smith
 # Date: 9/11/2017
 # Purpose: To attempt to properly implement an event-queue style of processing.
@@ -44,15 +44,17 @@ class Utility(object):
             except IndexError:
                 return None
 
+        #for ele in:
+
         # Correct weights if need be.
         min_weight = min(l_weights)
         if min_weight <= 0:
-            diff = abs(min_weight - 1)
+            diff = abs(min_weight) if min_weight else 1  # So that way zero just becomes one
             for i in range(len(l_weights)):
                 l_weights[i] += diff
 
         endpoint = sum(l_weights)
-        index = ((endpoint - 1) * random())
+        index = randint(0, endpoint - 1)
 
         # Sum of the weights for the stepper
         running_total = 0
@@ -180,6 +182,7 @@ class Event(object):
     def __str__(self):
         t = '' if not self.type else 'Type: ' + self.type.value
         v = '' if not self.value else 'Value: ' + str(self.value)
+
         joined = ', '.join(filter(lambda i: i, (t, v)))
         return 'Event {} ({})'.format(self.name, joined)
 
@@ -255,7 +258,7 @@ class Room(EventObject, RegisteredMixIn):
 
     def handle_event(self, event):
         if isinstance(event, Event) and event:
-            print('{} occurred in {}. | {}'.format(event, getattr(event.source, 'name', event.source), self.name))
+            print('{} occurred from {}. | {}'.format(event, getattr(event.source, 'name', event.source), self.name))
 
             if event.type == Signal.IDLE:
                 # Conversation Section
@@ -341,6 +344,9 @@ class Conversation(EventObject, RegisteredMixIn):
 class Person(EventObject, RegisteredMixIn):
     def __init__(self, **kwargs):
         super(EventObject, self).__init__()
+
+        self.name = kwargs.get('name', self.name)  # Keep the default name from RegisteredMixIn if none passed
+
         self.conversation = None
         self.social_tolerance = 5
         self.cur_tolerance = self.social_tolerance
@@ -389,7 +395,7 @@ class Person(EventObject, RegisteredMixIn):
             self.weight_map[MessageTraits.SAD] += 2
 
     def generate_message_trait(self):
-        valid_weights = filter(lambda item: self.weight_map[item[0]] > 0, self.weight_map.items())
+        valid_weights = [item for item in self.weight_map.items() if self.weight_map[item[0]] > 0]
 
         traits = []
         weights = []
@@ -401,9 +407,10 @@ class Person(EventObject, RegisteredMixIn):
 
         return Utility.random_weighted(traits, weights)
 
-    def generate_message_conv(self, target, *buffed_traits, _type=None):
-        e_type = _type if _type is not None else Converse.DEPARTURE
-        valid_traits = filter(bool, buffed_traits)
+    def generate_message_conv(self, target, *buffed_traits, ev_type=None):
+        e_type = ev_type if ev_type is not None else Converse.DEPARTURE
+
+        valid_traits = [trait for trait in buffed_traits if trait in MessageTraits]
 
         for trait in valid_traits:
             self.weight_map[trait] += 1
@@ -435,9 +442,12 @@ class Person(EventObject, RegisteredMixIn):
                             self.conversation.room.event_queue.append(Event(self, self.conversation.room,
                                                                             _type=Signal.DEPARTURE, value=self))
                     else:
-                        self.conversation.room.event_queue.append(self.generate_message_conv(self.conversation,
-                                                                                             event.value[1],
-                                                                                             _type=Converse.GENERIC))
+                        # Mainly here for readability's sake
+                        react_ev = self.generate_message_conv(self.conversation,
+                                                              getattr(MessageReactions, event.value[1].value, []),
+                                                              ev_type=Converse.GENERIC)
+
+                        self.conversation.room.event_queue.append(react_ev)
                         self.cur_tolerance -= 1
             except AttributeError:
                 # Look at Conversation
