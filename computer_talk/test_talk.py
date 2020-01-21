@@ -1,6 +1,6 @@
 import unittest
 
-from .computer_talk import *
+from .talk_lib import *
 
 
 class TestComputerTalk(unittest.TestCase):
